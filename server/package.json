@@ -1,0 +1,29 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@imagekit/nodejs": "^7.3.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dns": "^0.1.2",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "imagekit": "^6.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.2.1",
+    "multer": "^2.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
