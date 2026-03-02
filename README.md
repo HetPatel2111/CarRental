@@ -6,6 +6,12 @@ A production-style full-stack MERN application for car discovery, booking, and o
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](./LICENSE)
 [![Frontend: React](https://img.shields.io/badge/Frontend-React%2019-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Backend: Express](https://img.shields.io/badge/Backend-Express%205-000000?logo=express)](https://expressjs.com/)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-success?logo=vercel)](https://car-rental-lake-two.vercel.app/)
+
+## Live Preview
+
+- Public App URL: https://car-rental-lake-two.vercel.app/
+- Share this link with recruiters/users for instant preview (no local setup needed)
 
 ## Recruiter Snapshot
 
