@@ -33,8 +33,8 @@ const MyBookings = () => {
     initial={{opacity:0,y:30}}
     animate={{opacity:1,y:0}}
     transition={{duration:0.6}}
-    className='px-6 md:px-16 lg:px-24 xl:px-32 2xl:px-48 mt-16 text-sm
-    max-w-7xl'>
+    className='px-4 sm:px-6 md:px-16 lg:px-24 xl:px-32 2xl:px-48 mt-10 md:mt-16 text-sm
+    max-w-7xl mx-auto'>
 
       <Title title='My Bookings'
       subTitle='View and manage your all car bookings'
@@ -48,7 +48,7 @@ const MyBookings = () => {
           transition={{duration:0.4,delay:0.1*index}}
           
           key={booking._id} className='grid grid-cols-1 md:grid-cols-4 gap-6
-          p-6 border border-borderColor rounded-lg mt-5 first:mt-12'>
+          p-4 sm:p-6 border border-borderColor rounded-lg mt-5 first:mt-8 md:first:mt-12'>
             {/* {Car Image + Info} */}
             <div className='md:col-span-1'>
               <div className='rounded-md overflow-hidden mb-3'>
@@ -91,7 +91,7 @@ const MyBookings = () => {
             {/* {Price} */}
 
             <div className='md:col-span-1 flex flex-col justify-between gap-6'>
-                <div className='text-sm text-gray-500 text-right'>
+                <div className='text-sm text-gray-500 text-left md:text-right'>
                   <p>Total Price</p>
                   <h1 className='text-2xl font-semibold text-primary'>{currency}{booking.price}</h1>
                   <p>Booked on {booking.createdAt.split('T')[0]}</p>

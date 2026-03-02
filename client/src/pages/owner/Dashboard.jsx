@@ -49,8 +49,8 @@ const Dashboard = () => {
         <Title title='Admin Dashboard' subTitle='Monitor overall platform performance
         including total cars, bookings, revenue, and recent activities.' />
 
-        <div className='grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 my-8
-        max-w-3xl'>
+        <div className='grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 my-8
+        w-full'>
             {DashboardCards.map((card,index) => (
               <div key={index} className='flex gap-2 items-center justify-between p-4 
               rounded-md border border-borderColor'>

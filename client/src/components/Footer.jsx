@@ -8,7 +8,7 @@ const Footer = () => {
     initial={{opacity:0,y:30}}
     whileInView={{opacity:1,y:0}}
     transition={{duration:0.6}}
-    className='px-6 md:px-16 lg:px-24 xl:px-32 mt-60 text-sm text-gray-500'>
+    className='px-6 md:px-16 lg:px-24 xl:px-32 mt-28 md:mt-44 text-sm text-gray-500'>
             <motion.div 
             initial={{opacity:0,y:20}}
             whileInView={{opacity:1,y:0}}
@@ -46,7 +46,7 @@ const Footer = () => {
                 initial={{opacity:0,y:20}}
                 whileInView={{opacity:1,y:0}}
                 transition={{duration:0.6,delay:0.4}} 
-                className='flex flex-wrap justify-between w-1/2 gap-8'>
+                className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 w-full md:w-2/3'>
 
                 <div>
                     <h2 className='text-base font-medium text-gray-800 uppercase'>Quick Links</h2>
@@ -84,7 +84,7 @@ const Footer = () => {
             initial={{opacity:0,y:10}}
             whileInView={{opacity:1,y:0}}
             transition={{duration:0.6,delay:0.6}} 
-            className='flex flex-col md:flex-row gap-2 items-center justify-between py-5'>
+            className='flex flex-col md:flex-row gap-2 items-start md:items-center justify-between py-5'>
                 <p>© {new Date().getFullYear()} <a href="#">CarRental</a>. All rights reserved.</p>
                 <ul className='flex items-center gap-4'>
                     <li><a href="#">Privacy</a></li>

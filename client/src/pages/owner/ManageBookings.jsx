@@ -48,7 +48,7 @@ const ManageBookings = () => {
       <div className='w-full mt-6'>
         <div className='w-full overflow-x-auto rounded-md border border-borderColor'>
           
-          <table className='min-w-187.5 w-full border-collapse text-left text-sm text-gray-600'>
+          <table className='min-w-[750px] w-full border-collapse text-left text-sm text-gray-600'>
             
             <thead className='bg-gray-50'>
               <tr>
@@ -65,7 +65,7 @@ const ManageBookings = () => {
                 <tr key={index} className='border-t border-borderColor text-gray-500 hover:bg-gray-50 transition'>
                   
                   <td className='p-3'>
-                    <div className='flex items-center gap-3 min-w-50'>
+                    <div className='flex items-center gap-3 min-w-[200px]'>
                       <img 
                         src={booking.car.image} 
                         alt="" 

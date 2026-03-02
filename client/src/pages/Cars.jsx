@@ -97,7 +97,7 @@ const Cars = () => {
       animate={{opacity:1,y:0}}
       transition={{duration:0.6,ease:'easeOut'}}
 
-      className='flex flex-col items-center py-20 bg-light max-md:px-4'>
+      className='flex flex-col items-center py-16 md:py-20 bg-light px-4'>
         <Title title='Available Cars' subTitle='Browse our selection of premium
         vehicles avaliable for your next adventure'/>
 
@@ -105,7 +105,7 @@ const Cars = () => {
         initial={{opacity:0,y:20}}
         animate={{opacity:1,y:0}}
         transition={{duration:0.5,delay:0.3}}
-        className='flex items-center bg-white px-4 mt-6 max-w-140 w-full h-12 rounded-full shadow'>
+        className='flex items-center bg-white px-4 mt-6 max-w-2xl w-full h-12 rounded-full shadow'>
           <img src={assets.search_icon} alt="" className='w-4.5 h-4.5 mr-2' />
           <input onChange={(e)=> setInput(e.target.value)} value={input} type="text" placeholder='Search by make, model or features' className='w-full h-full outline-none text-gray-500'/>
           <img src={assets.filter_icon} alt="" className='w-4.5 h-4.5 ml-2' />

@@ -43,7 +43,7 @@ const CarDetails = () => {
   },[cars , id])
 
   return car ? (
-    <div className='px-6 md:px-16 lg:px-24 xl:px-32 mt-16'>
+    <div className='px-4 sm:px-6 md:px-16 lg:px-24 xl:px-32 mt-10 md:mt-16'>
       <button onClick={()=> navigate(-1)} className='flex items-center gap-2 mb-6
       text-gray-500 cursor-pointer'>
         <img src={assets.arrow_icon} alt="" className='rotate-180 opacity-65'/>
@@ -68,7 +68,7 @@ const CarDetails = () => {
           transition={{duration:0.5,delay:0.2}}
           className='space-y-6'>
             <div>
-              <h1 className='text-3xl font-bold'>{car.brand}{car.model}</h1>
+              <h1 className='text-2xl sm:text-3xl font-bold'>{car.brand} {car.model}</h1>
               <p className='text-gray-500 text-lg'>{car.category} {car.year}</p>
             </div>
             <hr className='border-borderColor my-6'/>
@@ -120,7 +120,7 @@ const CarDetails = () => {
         initial={{opacity:0,y:30}}
         animate={{opacity:1,y:0}}
         transition={{duration:0.6,delay:0.3}}
-        onSubmit={handleSubmit} className='shadow-lg h-max sticky top-18 rounded-xl p-6 space-y-6
+        onSubmit={handleSubmit} className='shadow-lg h-max lg:sticky lg:top-18 rounded-xl p-5 sm:p-6 space-y-6
         text-gray-600'>
           <p className='flex items-center justify-between text-2xl text-gray-800
           font-semibold'>{currency}{car.pricePerDay} <span className='text-base text-gray-400 font-normal'>Per day</span>
