@@ -1,125 +1,104 @@
-import User from '../models/User.js'
-import bcrypt from 'bcrypt'
-import jwt from 'jsonwebtoken'
-import Car from '../models/Car.js'
+import User from "../models/User.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import Car from "../models/Car.js";
+import { isValidEmail, normalizeEmail } from "../utils/validators.js";
 
-// Genearte JWT token
-// const generateToken = (userId)=>{
-//     const payload = userId
-//     return jwt.sign(payload,process.env.JWT_SECRET)
-// }
-const generateToken = (id) => {
-    console.log("JWT_SECRET used for signing:", process.env.JWT_SECRET) // 👈 add
-    return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' })
-}
+const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
-// Register User
-export const registerUser = async(req,res)=>{
-    try{
-        console.log(req.body)
-        const {name,email,password} = req.body
+export const registerUser = async (req, res) => {
+    try {
+        const { name, email, password } = req.body;
+        const normalizedEmail = normalizeEmail(email);
 
-        if(!name || !email || !password || password.length<8){
-            return res.json({
-                success:false,
-                message:"Fill all the fields"
-            })
+        if (!name?.trim() || !normalizedEmail || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "Please fill in all required fields.",
+            });
         }
 
-        const userExists = await User.findOne({email})
-        if(userExists){
-            return res.json({
-                success:false,
-                message:'User already exists'
-            })
+        if (!isValidEmail(normalizedEmail)) {
+            return res.status(400).json({
+                success: false,
+                message: "Please enter a valid email address.",
+            });
         }
 
-        const hashedPassword = await bcrypt.hash(password,10)
+        if (password.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: "Password must be at least 8 characters long.",
+            });
+        }
+
+        const userExists = await User.findOne({ email: normalizedEmail });
+        if (userExists) {
+            return res.status(409).json({
+                success: false,
+                message: "User already exists",
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
         const user = await User.create({
-            name,email,password:hashedPassword
-        })
+            name: name.trim(),
+            email: normalizedEmail,
+            password: hashedPassword,
+        });
 
-        const token = generateToken(user._id.toString())
-        res.json({success:true , token})
-
-    }catch(error){
-        console.log(error.message)
-        res.json({success:false , message:error.message})
+        res.status(201).json({
+            success: true,
+            token: generateToken(user._id.toString()),
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
-}
+};
 
+export const loginuser = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const normalizedEmail = normalizeEmail(email);
+        const user = await User.findOne({ email: normalizedEmail });
 
-// Login User
-export const loginuser = async(req,res)=>{
-    try{
-        const {email,password} = req.body 
-        const user = await User.findOne({email})
-
-        if(!user){
-            return res.json({
-                success:false,
-                message:"User not found"
-            })
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
         }
 
-        const isMatch = await bcrypt.compare(password,user.password)
+        const isMatch = await bcrypt.compare(password, user.password);
 
-        if(!isMatch){
-            return res.json({
-                success:false,
-                message:"Invalid Credentials"
-            })
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid credentials",
+            });
         }
 
-        const token = generateToken(user._id.toString())
-        res.json({success:true , token})
-
-    } catch(error){
-        console.log(error.message)
-        res.json({success:false , message:error.message})
+        res.json({
+            success: true,
+            token: generateToken(user._id.toString()),
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
-}
+};
 
-// Get User data using Token(JWT)
-
-// export const getUserData = async(req,res) =>{
-//     try{
-//         const {user} = req;
-//         res.json({
-//             success:true,
-//             user
-//         })
-//     } catch(error){
-//         console.log(error.message)
-//         res.json({success:false , message:error.message})
-//     }
-// }
 export const getUserData = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select('-password')
-
     res.status(200).json({
-      success: true,
-      user
-    })
+        success: true,
+        user: req.user,
+    });
+};
 
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    })
-  }
-}
-
-
-
-// Get All Cars for the Frontend
-export const getCars = async(req,res)=>{
-    try{
-        const cars = await Car.find({isAvaliable:true})
-        res.json({success:true , cars})
-    }catch(error){
-        console.log(error.message)
-        res.json({success:false , message:error.message})
+export const getCars = async (req, res) => {
+    try {
+        const cars = await Car.find({ isAvaliable: true, isDeleted: false }).sort({ createdAt: -1 });
+        res.json({ success: true, cars });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
-}
+};

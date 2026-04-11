@@ -1,38 +1,40 @@
-import React from 'react'
-import { assets } from '../assets/assets'
-import {motion} from 'motion/react'
+import { Link } from "react-router-dom";
+import { motion as Motion } from "motion/react";
+import { assets } from "../assets/assets";
 
 const Banner = () => {
-  return (
-    <motion.div 
-    initial={{opacity:0,y:50}}
-    whileInView={{opacity:1,y:0}}
-    transition={{duration:0.6}}
-    className='flex flex-col md:flex-row md:items-start items-center
-        justify-between px-5 sm:px-8 md:pl-14 pt-10 bg-linear-to-r from-[#0558FE] to-[#A9CFFF]
-        max-w-6xl mx-3 md:mx-auto rounded-2xl overflow-hidden gap-6'>
+    return (
+        <Motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="mx-3 flex max-w-6xl flex-col items-center justify-between overflow-hidden rounded-2xl bg-linear-to-r from-[#0558FE] to-[#A9CFFF] px-8 pt-10 md:mx-auto md:flex-row md:items-start md:pl-14"
+        >
+            <div className="text-white">
+                <h2 className="text-3xl font-medium">Have a car to rent out?</h2>
+                <p className="mt-2">Turn your vehicle into a reliable source of extra income.</p>
+                <p className="max-w-130">
+                    Create an owner account, add your vehicle details, and manage bookings from a dedicated dashboard.
+                </p>
 
-        <div className='text-white text-center md:text-left'>
-            <h2 className='text-2xl sm:text-3xl font-medium'>Do You Own a luxury Car?</h2>
-            <p className='mt-2'>Monetize your vehicle effortlessly by listing it on CarRental.</p>
-            <p className='max-w-130'>We take care of insurance, driver verification and secure payments — so you can earn passive income, stress-free.</p>
+                <Link
+                    to="/owner"
+                    className="mt-4 inline-flex rounded-lg bg-white px-6 py-2 text-sm text-primary transition-all hover:bg-slate-100"
+                >
+                    Explore owner dashboard
+                </Link>
+            </div>
 
-            <motion.button 
-            whileHover={{scale:1.05}}
-            whileTap={{scale:0.95}}
-            className='px-6 py-2 bg-white hover:bg-slate-100 transition-all
-                text-primary rounded-lg text-sm mt-4 cursor-pointer'>
-                List your car
-            </motion.button>
-        </div>
+            <Motion.img
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                src={assets.banner_car_image}
+                alt="Owner dashboard car banner"
+                className="mt-10 max-h-45"
+            />
+        </Motion.div>
+    );
+};
 
-        <motion.img 
-        initial={{opacity:0 ,x:50}}
-        whileInView={{opacity:1,x:0}}
-        transition={{duration:0.6,delay:0.4}}
-        src={assets.banner_car_image} alt="car" className='max-h-45 mt-4 md:mt-10 w-full max-w-sm md:max-w-none object-contain' />
-    </motion.div>
-  )
-}
-
-export default Banner
+export default Banner;

@@ -36,6 +36,10 @@ const bookingSchema = new mongoose.Schema({
     }
 },{timestamps:true})
 
+bookingSchema.index({ car: 1, pickupDate: 1, returnDate: 1, status: 1 })
+bookingSchema.index({ owner: 1, createdAt: -1 })
+bookingSchema.index({ user: 1, createdAt: -1 })
+
 const Booking = mongoose.model('Booking',bookingSchema)
 
 export default Booking

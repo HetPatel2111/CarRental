@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import Title from '../../components/owner/Title';
 import { assets } from '../../assets/assets';
-import { useAppContext } from '../../contex/AppContext';
+import { useAppContext } from '../../hooks/useAppContext';
 import toast from "react-hot-toast";
+import { getErrorMessage } from '../../utils/formatters';
 
 const AddCar = () => {
 
@@ -55,7 +56,7 @@ const AddCar = () => {
       }
 
     }catch(error){
-      toast.error(error.message)
+      toast.error(getErrorMessage(error))
     }finally{
       setIsLoading(false)
     }
