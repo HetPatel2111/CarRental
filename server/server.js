@@ -11,9 +11,27 @@ const app = express();
 
 await connectDB();
 
+const allowedOrigins = [
+    process.env.CLIENT_URL,
+    ...(process.env.CLIENT_URLS || "")
+        .split(",")
+        .map((origin) => origin.trim())
+        .filter(Boolean),
+    "http://localhost:5173",
+    "https://car-rental-lake-two.vercel.app",
+];
+
+const uniqueAllowedOrigins = [...new Set(allowedOrigins.filter(Boolean))];
+
 app.use(
     cors({
-        origin: process.env.CLIENT_URL || "*",
+        origin: (origin, callback) => {
+            if (!origin || uniqueAllowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+
+            return callback(new Error(`CORS blocked for origin: ${origin}`));
+        },
         credentials: true,
     })
 );
