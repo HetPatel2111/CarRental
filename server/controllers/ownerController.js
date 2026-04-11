@@ -76,7 +76,7 @@ export const getOwnerCars = async (req, res) => {
         }
 
         const { _id } = req.user;
-        const cars = await Car.find({ owner: _id, isDeleted: false }).sort({ createdAt: -1 });
+        const cars = await Car.find({ owner: _id, isDeleted: { $ne: true } }).sort({ createdAt: -1 });
 
         res.json({ success: true, cars });
     } catch (error) {
@@ -165,13 +165,13 @@ export const getDashboardData = async (req, res) => {
         const currentMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
         const nextMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
 
-        const cars = await Car.find({ owner: _id, isDeleted: false });
+        const cars = await Car.find({ owner: _id, isDeleted: { $ne: true } });
         const bookings = await Booking.find({ owner: _id }).populate("car").sort({ createdAt: -1 });
         const pendingBookings = bookings.filter((booking) => booking.status === "pending");
         const completeBookings = bookings.filter((booking) => booking.status === "confirmed");
 
         const monthlyRevenue = bookings
-            .filter((booking) => booking.status === "confirmed")
+            .filter((booking) => booking.status === "confirmed" && booking.paymentStatus === "paid")
             .filter((booking) => booking.createdAt >= currentMonthStart && booking.createdAt < nextMonthStart)
             .reduce((accumulator, booking) => accumulator + booking.price, 0);
 

@@ -14,6 +14,12 @@ const statusStyles = {
     cancelled: "bg-red-400/15 text-red-600",
 };
 
+const paymentStyles = {
+    paid: "bg-green-400/15 text-green-600",
+    pending: "bg-yellow-400/15 text-yellow-700",
+    failed: "bg-red-400/15 text-red-600",
+};
+
 const MyBookings = () => {
     const { axios, user, currency } = useAppContext();
     const [bookings, setBookings] = useState([]);
@@ -111,6 +117,17 @@ const MyBookings = () => {
                                         <p className="text-gray-500">Pickup location</p>
                                         <p>{booking.car?.location}</p>
                                     </div>
+                                </div>
+
+                                <div className="mt-3">
+                                    <p className="text-gray-500">Payment</p>
+                                    <p
+                                        className={`mt-1 inline-flex rounded-full px-3 py-1 text-xs ${
+                                            paymentStyles[booking.paymentStatus || "pending"]
+                                        }`}
+                                    >
+                                        {booking.paymentMethod || "stripe"} • {booking.paymentStatus || "pending"}
+                                    </p>
                                 </div>
                             </div>
 

@@ -38,15 +38,14 @@ const CarDetails = () => {
         setIsSubmitting(true);
 
         try {
-            const { data } = await axios.post("/api/bookings/create", {
+            const { data } = await axios.post("/api/bookings/checkout-session", {
                 car: id,
                 pickupDate,
                 returnDate,
             });
 
             if (data.success) {
-                toast.success(data.message);
-                navigate("/my-bookings");
+                window.location.href = data.url;
             } else {
                 toast.error(data.message);
             }
@@ -182,10 +181,10 @@ const CarDetails = () => {
                         disabled={isSubmitting}
                         className="w-full rounded-xl bg-primary py-3 font-medium text-white transition-all hover:bg-primary-dull disabled:cursor-not-allowed disabled:opacity-70"
                     >
-                        {isSubmitting ? "Processing..." : "Book now"}
+                        {isSubmitting ? "Redirecting to payment..." : "Proceed to payment"}
                     </button>
 
-                    <p className="text-center text-sm">Secure booking flow with date validation and owner approval support.</p>
+                    <p className="text-center text-sm">Secure Stripe checkout with card payment and booking confirmation.</p>
                 </Motion.form>
             </div>
         </div>

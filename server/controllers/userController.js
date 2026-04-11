@@ -96,7 +96,7 @@ export const getUserData = async (req, res) => {
 
 export const getCars = async (req, res) => {
     try {
-        const cars = await Car.find({ isAvaliable: true, isDeleted: false }).sort({ createdAt: -1 });
+        const cars = await Car.find({ isAvaliable: true, isDeleted: { $ne: true } }).sort({ createdAt: -1 });
         res.json({ success: true, cars });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

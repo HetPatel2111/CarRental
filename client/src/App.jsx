@@ -7,6 +7,8 @@ import Home from "./pages/Home";
 import Cars from "./pages/Cars";
 import CarDetails from "./pages/CarDetails";
 import MyBookings from "./pages/MyBookings";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancel from "./pages/PaymentCancel";
 import Layout from "./pages/owner/Layout";
 import Dashboard from "./pages/owner/Dashboard";
 import AddCar from "./pages/owner/AddCar";
@@ -30,6 +32,8 @@ const App = () => {
                 <Route path="/cars" element={<Cars />} />
                 <Route path="/car-details/:id" element={<CarDetails />} />
                 <Route path="/my-bookings" element={<MyBookings />} />
+                <Route path="/payment/success" element={<PaymentSuccess />} />
+                <Route path="/payment/cancel" element={<PaymentCancel />} />
 
                 <Route path="/owner" element={<Layout />}>
                     <Route index element={<Dashboard />} />

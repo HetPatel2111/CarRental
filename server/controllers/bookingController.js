@@ -1,5 +1,6 @@
 import Booking from "../models/Bookings.js";
 import Car from "../models/Car.js";
+import stripe from "../configs/stripe.js";
 import { calculateRentalDays, validateBookingDates } from "../utils/validators.js";
 
 const checkAvailbility = async (car, pickupDate, returnDate) => {
@@ -11,6 +12,39 @@ const checkAvailbility = async (car, pickupDate, returnDate) => {
     });
 
     return bookings.length === 0;
+};
+
+const buildBookingPayload = async ({ userId, carId, pickupDate, returnDate }) => {
+    const dateValidation = validateBookingDates(pickupDate, returnDate);
+
+    if (!dateValidation.valid) {
+        return { error: { status: 400, message: dateValidation.message } };
+    }
+
+    const isAvaliable = await checkAvailbility(carId, pickupDate, returnDate);
+    if (!isAvaliable) {
+        return { error: { status: 409, message: "Car is not available" } };
+    }
+
+    const carData = await Car.findById(carId);
+    if (!carData || carData.isDeleted || !carData.isAvaliable) {
+        return { error: { status: 404, message: "Car not found" } };
+    }
+
+    if (carData.owner.toString() === userId.toString()) {
+        return { error: { status: 400, message: "You cannot book your own car." } };
+    }
+
+    const numberOfDays = calculateRentalDays(
+        dateValidation.parsedPickupDate,
+        dateValidation.parsedReturnDate
+    );
+
+    return {
+        carData,
+        price: carData.pricePerDay * numberOfDays,
+        numberOfDays,
+    };
 };
 
 export const checkAvailbilityOfCar = async (req, res) => {
@@ -29,7 +63,7 @@ export const checkAvailbilityOfCar = async (req, res) => {
         const cars = await Car.find({
             location,
             isAvaliable: true,
-            isDeleted: false,
+            isDeleted: { $ne: true },
         });
 
         const availableCars = await Promise.all(
@@ -52,44 +86,165 @@ export const createBooking = async (req, res) => {
     try {
         const { _id } = req.user;
         const { car, pickupDate, returnDate } = req.body;
-        const dateValidation = validateBookingDates(pickupDate, returnDate);
+        const bookingData = await buildBookingPayload({
+            userId: _id,
+            carId: car,
+            pickupDate,
+            returnDate,
+        });
 
-        if (!dateValidation.valid) {
-            return res.status(400).json({ success: false, message: dateValidation.message });
+        if (bookingData.error) {
+            return res.status(bookingData.error.status).json({
+                success: false,
+                message: bookingData.error.message,
+            });
         }
-
-        const isAvaliable = await checkAvailbility(car, pickupDate, returnDate);
-
-        if (!isAvaliable) {
-            return res.status(409).json({ success: false, message: "Car is not available" });
-        }
-
-        const carData = await Car.findById(car);
-
-        if (!carData || carData.isDeleted || !carData.isAvaliable) {
-            return res.status(404).json({ success: false, message: "Car not found" });
-        }
-
-        if (carData.owner.toString() === _id.toString()) {
-            return res.status(400).json({ success: false, message: "You cannot book your own car." });
-        }
-
-        const numberOfDays = calculateRentalDays(
-            dateValidation.parsedPickupDate,
-            dateValidation.parsedReturnDate
-        );
-        const price = carData.pricePerDay * numberOfDays;
 
         await Booking.create({
             car,
-            owner: carData.owner,
+            owner: bookingData.carData.owner,
             user: _id,
             pickupDate,
             returnDate,
-            price,
+            price: bookingData.price,
         });
 
         res.status(201).json({ success: true, message: "Booking created successfully" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const createCheckoutSession = async (req, res) => {
+    try {
+        const { _id } = req.user;
+        const { car, pickupDate, returnDate } = req.body;
+        const bookingData = await buildBookingPayload({
+            userId: _id,
+            carId: car,
+            pickupDate,
+            returnDate,
+        });
+
+        if (bookingData.error) {
+            return res.status(bookingData.error.status).json({
+                success: false,
+                message: bookingData.error.message,
+            });
+        }
+
+        const booking = await Booking.create({
+            car,
+            owner: bookingData.carData.owner,
+            user: _id,
+            pickupDate,
+            returnDate,
+            price: bookingData.price,
+            paymentStatus: "pending",
+        });
+
+        const session = await stripe.checkout.sessions.create({
+            mode: "payment",
+            payment_method_types: ["card"],
+            line_items: [
+                {
+                    price_data: {
+                        currency: "usd",
+                        product_data: {
+                            name: `${bookingData.carData.brand} ${bookingData.carData.model}`,
+                            description: `${bookingData.numberOfDays} day rental in ${bookingData.carData.location}`,
+                            images: bookingData.carData.image ? [bookingData.carData.image] : [],
+                        },
+                        unit_amount: Math.round(bookingData.price * 100),
+                    },
+                    quantity: 1,
+                },
+            ],
+            metadata: {
+                bookingId: booking._id.toString(),
+                userId: _id.toString(),
+            },
+            success_url: `${process.env.CLIENT_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.CLIENT_URL}/payment/cancel?bookingId=${booking._id}`,
+        });
+
+        booking.stripeSessionId = session.id;
+        await booking.save();
+
+        res.status(201).json({
+            success: true,
+            url: session.url,
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const verifyCheckoutSession = async (req, res) => {
+    try {
+        const sessionId = req.query.session_id;
+
+        if (!sessionId) {
+            return res.status(400).json({ success: false, message: "Session id is required." });
+        }
+
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        const booking = await Booking.findOne({ stripeSessionId: sessionId }).populate("car");
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: "Booking not found." });
+        }
+
+        if (booking.user.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, message: "Unauthorized" });
+        }
+
+        if (session.payment_status === "paid") {
+            booking.paymentStatus = "paid";
+            booking.status = "confirmed";
+            await booking.save();
+
+            return res.json({
+                success: true,
+                message: "Payment verified successfully.",
+                booking,
+            });
+        }
+
+        return res.status(400).json({
+            success: false,
+            message: "Payment is not completed yet.",
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const cancelPendingPayment = async (req, res) => {
+    try {
+        const { bookingId } = req.body;
+        const booking = await Booking.findById(bookingId);
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: "Booking not found." });
+        }
+
+        if (booking.user.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, message: "Unauthorized" });
+        }
+
+        if (booking.paymentStatus === "paid") {
+            return res.status(400).json({
+                success: false,
+                message: "Paid bookings cannot be cancelled from this page.",
+            });
+        }
+
+        booking.paymentStatus = "failed";
+        booking.status = "cancelled";
+        await booking.save();
+
+        res.json({ success: true, message: "Payment was cancelled." });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -144,6 +299,13 @@ export const changeBookingStatus = async (req, res) => {
 
         if (booking.owner.toString() !== _id.toString()) {
             return res.status(403).json({ success: false, message: "Unauthorized" });
+        }
+
+        if (status === "confirmed" && booking.paymentStatus !== "paid") {
+            return res.status(400).json({
+                success: false,
+                message: "Only paid bookings can be confirmed.",
+            });
         }
 
         booking.status = status;

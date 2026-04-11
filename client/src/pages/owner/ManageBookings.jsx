@@ -70,6 +70,7 @@ const ManageBookings = () => {
                                 <th className="p-3 font-medium whitespace-nowrap">Customer</th>
                                 <th className="p-3 font-medium whitespace-nowrap">Date range</th>
                                 <th className="p-3 font-medium whitespace-nowrap">Total</th>
+                                <th className="p-3 font-medium whitespace-nowrap">Payment</th>
                                 <th className="p-3 font-medium whitespace-nowrap">Status</th>
                             </tr>
                         </thead>
@@ -102,6 +103,20 @@ const ManageBookings = () => {
                                     <td className="p-3 whitespace-nowrap">
                                         {currency}
                                         {booking.price}
+                                    </td>
+
+                                    <td className="p-3 whitespace-nowrap">
+                                        <span
+                                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                                (booking.paymentStatus || "pending") === "paid"
+                                                    ? "bg-green-100 text-green-500"
+                                                    : (booking.paymentStatus || "pending") === "pending"
+                                                      ? "bg-yellow-100 text-yellow-700"
+                                                      : "bg-red-100 text-red-500"
+                                            }`}
+                                        >
+                                            {booking.paymentMethod || "stripe"} • {booking.paymentStatus || "pending"}
+                                        </span>
                                     </td>
 
                                     <td className="p-3 whitespace-nowrap">
