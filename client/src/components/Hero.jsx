@@ -1,134 +1,82 @@
-import { useState } from "react";
-import { motion as Motion } from "motion/react";
-import { toast } from "react-hot-toast";
-import { assets, cityList } from "../assets/assets";
-import { useAppContext } from "../hooks/useAppContext";
+import React, { useState } from 'react'
+import { assets, cityList } from '../assets/assets'
+import {useAppContext} from "../contex/AppContext"
+import {motion} from 'motion/react'
 
 const Hero = () => {
-    const { navigate } = useAppContext();
-    const [pickupLocation, setPickupLocation] = useState("");
-    const [pickupDate, setPickupDate] = useState("");
-    const [returnDate, setReturnDate] = useState("");
 
-    const today = new Date().toISOString().split("T")[0];
+  const [PickupLocation , setPickupLocation] = useState('');
 
-    const handleSearch = (event) => {
-        event.preventDefault();
+  const {pickupDate , setPickupDate , returnDate , setReturnDate , navigate} = useAppContext();
 
-        if (!pickupLocation || !pickupDate || !returnDate) {
-            toast.error("Please complete all search fields.");
-            return;
-        }
+  const handleSearch = (e)=>{
+    e.preventDefault()
+    navigate('/cars?PickupLocation=' + PickupLocation + '&pickupDate=' + pickupDate + '&returnDate=' + returnDate)
+  }
+  
+  const today = new Date().toISOString().split("T")[0];
+//    const [pickupDate, setPickupDate] = useState("");
+//   const [returnDate, setReturnDate] = useState("");
 
-        if (returnDate < pickupDate) {
-            toast.error("Return date must be after the pickup date.");
-            return;
-        }
+  return (
+    <motion.div 
+    initial={{opacity:0}}
+    animate={{opacity:1}}
+    transition={{duration:0.8}}
+    className='h-screen flex flex-col items-center justify-center gap-14 bg-light text-center'>
+        <h1
+        initial={{y:50,opacity:0}}
+        animate={{y:0,opacity:1}}
+        transition={{duration:0.8 , delay:0.2}} 
+        className='text-4xl md:text-5xl font-semibold'>Luxury cars on Rent</h1>
 
-        const query = new URLSearchParams({
-            PickupLocation: pickupLocation,
-            pickupDate,
-            returnDate,
-        });
+        <motion.form 
+        initial={{scale:0.95 , opacity:0 , y:50}}
+        animate={{scale:1,opacity:1,y:0}}
+        transition={{duration:0.6 ,delay:0.4}}
 
-        navigate(`/cars?${query.toString()}`);
-    };
+        onSubmit={handleSearch} className='flex flex-col md:flex-row items-start md:items-center
+        justify-between p-6 rounded-lg md:rounded-full w-full max-w-80 md:max-w-200 
+        bg-white shadow-[0px_8px_20px_rgba(0,0,0,0.1)]'>
 
-    return (
-        <Motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8 }}
-            className="flex min-h-screen flex-col items-center justify-center gap-14 bg-light px-6 text-center"
-        >
-            <Motion.h1
-                initial={{ y: 50, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-                className="max-w-4xl text-4xl font-semibold md:text-5xl"
-            >
-                Book reliable cars with a clean, modern rental experience
-            </Motion.h1>
+            <div className='flex flex-col md:flex-row items-start md:items-center gap-10 md:ml-8'>
+                <div className='flex flex-col items-start gap-2'>
+                    <select required value={PickupLocation} onChange={(e)=>setPickupLocation(e.target.value)}>
+                        <option value="">Pickup Location</option>
+                        {cityList.map((city)=> <option value={city} key={city}>{city}</option>)}
+                    </select>
 
-            <Motion.form
-                initial={{ scale: 0.95, opacity: 0, y: 50 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-                onSubmit={handleSearch}
-                className="flex w-full max-w-5xl flex-col items-start justify-between gap-6 rounded-3xl bg-white p-6 text-left shadow-[0px_18px_45px_rgba(15,23,42,0.12)] md:flex-row md:items-end"
-            >
-                <div className="grid w-full gap-5 md:grid-cols-3">
-                    <div className="flex flex-col gap-2">
-                        <label htmlFor="pickup-location" className="text-sm font-medium text-gray-700">
-                            Pickup location
-                        </label>
-                        <select
-                            id="pickup-location"
-                            required
-                            value={pickupLocation}
-                            onChange={(event) => setPickupLocation(event.target.value)}
-                            className="rounded-xl border border-borderColor px-4 py-3 text-sm text-gray-600 outline-none"
-                        >
-                            <option value="">Select location</option>
-                            {cityList.map((city) => (
-                                <option value={city} key={city}>
-                                    {city}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                        <label htmlFor="pickup-date" className="text-sm font-medium text-gray-700">
-                            Pickup date
-                        </label>
-                        <input
-                            id="pickup-date"
-                            type="date"
-                            min={today}
-                            value={pickupDate}
-                            onChange={(event) => setPickupDate(event.target.value)}
-                            className="rounded-xl border border-borderColor px-4 py-3 text-sm text-gray-600 outline-none"
-                            required
-                        />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                        <label htmlFor="return-date" className="text-sm font-medium text-gray-700">
-                            Return date
-                        </label>
-                        <input
-                            id="return-date"
-                            type="date"
-                            min={pickupDate || today}
-                            value={returnDate}
-                            onChange={(event) => setReturnDate(event.target.value)}
-                            className="rounded-xl border border-borderColor px-4 py-3 text-sm text-gray-600 outline-none"
-                            required
-                        />
-                    </div>
+                    <p className='px-1 text-sm text-gray-500'>{PickupLocation ? 
+                    PickupLocation : 'Please select location'}</p>
                 </div>
+                <div className='flex flex-col items-start gap-2'>
+                        <label htmlFor="pickup-date">Pick-up Date</label>
+                        <input value={pickupDate} onChange={e=>setPickupDate(e.target.value)}  type="date" id="pickup-date" min={today}   className='text-sm text-gray-500' required/>
+                </div>
+                <div className='flex flex-col items-start gap-2'>
+                        <label htmlFor="return-date">Return Date</label>
+                        <input value={returnDate} onChange={e=>setReturnDate(e.target.value)} type="date" id="return-date"  min={pickupDate || today}  className='text-sm text-gray-500' required/>
+                </div>
+            </div>
+                <motion.button
+                whileHover={{scale:1.05}}
+                whileTap={{scale:0.95}}
+                className='flex items-center justify-center gap-1 px-9 py-3
+                    max-sm:mt-4 bg-primary hover:bg-primary-dull text-white rounded-full
+                    cursor-pointer'>
+                        <img src={assets.search_icon} alt="Search" className='brightness-300'/>
+                    Search
+                </motion.button>
 
-                <Motion.button
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.97 }}
-                    className="flex items-center justify-center gap-2 rounded-full bg-primary px-9 py-3 text-white transition-all hover:bg-primary-dull"
-                >
-                    <img src={assets.search_icon} alt="Search" className="brightness-300" />
-                    Search cars
-                </Motion.button>
-            </Motion.form>
+        </motion.form>
 
-            <Motion.img
-                initial={{ y: 100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.6 }}
-                src={assets.main_car}
-                alt="Featured rental car"
-                className="max-h-80"
-            />
-        </Motion.div>
-    );
-};
+        <motion.img
+        initial={{y:100,opacity:0}}
+        animate={{y:0,opacity:1}}
+        transition={{duration:0.8,delay:0.6}}
+        src={assets.main_car} alt="car" className='max-h-74' />
+    </motion.div>
+  )
+}
 
-export default Hero;
+export default Hero

@@ -1,29 +1,28 @@
-import { Navigate, Outlet } from "react-router-dom";
-import Sidebar from "../../components/owner/Sidebar";
-import NavbarOwner from "../../components/owner/NavbarOwner";
-import Loader from "../../components/Loader";
-import { useAppContext } from "../../hooks/useAppContext";
+import React, { useEffect } from 'react'
+import Sidebar from '../../components/owner/Sidebar'
+import { Outlet } from 'react-router-dom'
+import NavbarOwner from '../../components/owner/NavbarOwner'
+import { useAppContext } from '../../contex/AppContext'
 
 const Layout = () => {
-    const { isOwner, authLoading } = useAppContext();
 
-    if (authLoading) {
-        return <Loader />;
+  const {isOwner , navigate} = useAppContext()
+
+  useEffect(()=>{
+    if(!isOwner){
+      navigate('/')
     }
+  })
 
-    if (!isOwner) {
-        return <Navigate to="/" replace />;
-    }
+  return (
+    <div className='flex flex-col'>
+      <NavbarOwner />
+      <div className='flex'>
+          <Sidebar />
+          <Outlet />
+      </div>
+    </div>  
+  )
+}
 
-    return (
-        <div className="flex flex-col">
-            <NavbarOwner />
-            <div className="flex">
-                <Sidebar />
-                <Outlet />
-            </div>
-        </div>
-    );
-};
-
-export default Layout;
+export default Layout
