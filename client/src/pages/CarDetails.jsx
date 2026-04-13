@@ -6,12 +6,27 @@ import { useAppContext } from '../contex/AppContext';
 import toast from 'react-hot-toast'
 import {motion} from 'motion/react'
 
+const loadRazorpayScript = () =>
+  new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true)
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    script.onload = () => resolve(true)
+    script.onerror = () => resolve(false)
+    document.body.appendChild(script)
+  })
+
 const CarDetails = () => {
   const {id} = useParams();
-  const {cars,axios,pickupDate,setPickupDate,returnDate,setReturnDate} = useAppContext()
+  const {cars,axios,user,token,pickupDate,setPickupDate,returnDate,setReturnDate} = useAppContext()
 
   const navigate = useNavigate();
   const [car, setCar] = useState(null);
+  const [isPaying, setIsPaying] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -20,21 +35,82 @@ const CarDetails = () => {
 
   const handleSubmit = async(e) =>{
     e.preventDefault();
+
+    if (!token) {
+      toast.error('Please login to continue')
+      navigate('/')
+      return
+    }
+
+    setIsPaying(true)
+
     try{
-      const {data} = await axios.post('/api/bookings/create',{
+      const scriptLoaded = await loadRazorpayScript()
+
+      if (!scriptLoaded) {
+        toast.error('Razorpay checkout failed to load')
+        return
+      }
+
+      const {data} = await axios.post('/api/bookings/create-order',{
         car:id,
         pickupDate,
         returnDate
       })
 
-      if(data.success){
-        toast.success(data.message)
-        navigate('/my-bookings')
-      }else{
+      if(!data.success){
         toast.error(data.message)
+        return
       }
+
+      const options = {
+        key: data.key,
+        amount: data.order.amount,
+        currency: data.order.currency,
+        name: 'CarRental',
+        description: `${car.brand} ${car.model} booking payment`,
+        order_id: data.order.id,
+        handler: async (response) => {
+          try {
+            const verification = await axios.post('/api/bookings/verify-payment', {
+              car: id,
+              pickupDate,
+              returnDate,
+              ...response
+            })
+
+            if (verification.data.success) {
+              toast.success(verification.data.message)
+              navigate('/my-bookings')
+            } else {
+              toast.error(verification.data.message)
+            }
+          } catch (error) {
+            toast.error(error.response?.data?.message || error.message)
+          } finally {
+            setIsPaying(false)
+          }
+        },
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || ''
+        },
+        theme: {
+          color: '#0f766e'
+        },
+        modal: {
+          ondismiss: () => {
+            setIsPaying(false)
+            toast.error('Payment cancelled')
+          }
+        }
+      }
+
+      const razorpay = new window.Razorpay(options)
+      razorpay.open()
     }catch(error){
-      toast.error(error.message)
+      toast.error(error.response?.data?.message || error.message)
+      setIsPaying(false)
     }
   }
 
@@ -140,9 +216,9 @@ const CarDetails = () => {
             <input type="date" required id="return-date"  min={pickupDate || today} value={returnDate} onChange={(e) => setReturnDate(e.target.value)} className='border border-borderColor px-3 py-2 rounded-lg'/>
           </div>
 
-          <button className='w-full bg-primary hover:bg-primary-dull transition-all py-3 font-medium text-white rounded-xl cursor-pointer'>Book Now</button>
+          <button disabled={isPaying} className='w-full bg-primary hover:bg-primary-dull transition-all py-3 font-medium text-white rounded-xl cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed'>{isPaying ? 'Processing...' : 'Pay & Book Now'}</button>
 
-          <p className='text-center text-sm'>No credit card required to reserve</p>
+          <p className='text-center text-sm'>Secure payment powered by Razorpay</p>
         </motion.form>
       </div>
     </div>
