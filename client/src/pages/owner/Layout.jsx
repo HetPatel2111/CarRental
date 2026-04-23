@@ -6,13 +6,21 @@ import { useAppContext } from '../../contex/AppContext'
 
 const Layout = () => {
 
-  const {isOwner , navigate} = useAppContext()
+  const {isOwner , user , navigate, requestLogin} = useAppContext()
 
   useEffect(()=>{
+    if(!user){
+      if (!localStorage.getItem('token')) {
+        requestLogin({ redirectPath: '/owner' })
+        navigate('/')
+      }
+      return
+    }
+
     if(!isOwner){
       navigate('/')
     }
-  })
+  }, [isOwner, navigate, requestLogin, user])
 
   return (
     <div className='flex flex-col'>

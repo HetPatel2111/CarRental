@@ -14,7 +14,9 @@ A production-style MERN application for car discovery, booking, and owner-side f
 - User registration and login with JWT authentication
 - Browse and filter available cars
 - Search cars by location and travel dates
-- Book cars with date validation and availability checks
+- AI trip planner chatbot that turns natural-language requests into car suggestions and filters
+- Only logged-in users can open protected features such as chatbot and booking history
+- Book cars with date validation, availability checks, and payment options
 - View booking history with status tracking
 - Upgrade a user to owner and manage listed vehicles
 - Owner dashboard with booking and revenue summaries
@@ -26,15 +28,17 @@ A production-style MERN application for car discovery, booking, and owner-side f
 - Backend: Node.js, Express, MongoDB, Mongoose
 - Authentication: JWT, bcrypt
 - Media storage: ImageKit
-- Deployment: Vercel + GitHub
+- Payments: Razorpay
+- Deployment: Vercel + GitHub Actions
 
 ## Project Structure
 
 ```text
 CarRental/
-├─ client/   # React frontend
-├─ server/   # Express API
-└─ README.md
+├── .github/workflows/client-build.yml
+├── client/   # React frontend
+├── server/   # Express API
+└── README.md
 ```
 
 ## Environment Variables
@@ -48,6 +52,11 @@ Use the provided example files:
 
 - `client/.env.example`
 - `server/.env.example`
+
+Chatbot-specific server settings:
+
+- `OPENAI_API_KEY` to enable AI responses
+- `OPENAI_MODEL` optional, defaults to `gpt-5.4-mini`
 
 ## Local Setup
 
@@ -93,10 +102,17 @@ npm run dev
 - Better booking date validation and price calculation
 - Professional empty states and loading states
 - Improved route guarding for owner pages
+- AI chatbot flow for search, booking, and booking management
+- Protected feature redirect flow that reopens the clicked feature after login
 - Cleaner README and environment setup
 
 ## Verification
 
-- Frontend lint passes with `npm run lint`
 - Frontend build passes with `npm run build`
+- Backend route and chatbot controller syntax checks pass with `node --check`
 - Backend request validation and route protection were tightened during refactor
+
+## GitHub Actions
+
+- `Client Build` runs automatically on pushes and pull requests to `main`.
+- The status badge at the top of this README links to the workflow run details.

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import axios from "axios"
 import {toast} from "react-hot-toast"
 import { useNavigate } from "react-router-dom";
@@ -6,6 +6,20 @@ import { useNavigate } from "react-router-dom";
 axios.defaults.baseURL = import.meta.env.VITE_BASE_URL
 
 export const AppContext = createContext();
+
+const getErrorMessage = (error) => {
+    const responseMessage = error?.response?.data?.message
+
+    if (responseMessage) {
+        return responseMessage
+    }
+
+    if (error?.response?.status === 401) {
+        return "Please log in to continue."
+    }
+
+    return error?.message || "Something went wrong. Please try again."
+}
 
 export const AppProvider = ({children}) =>{
     
@@ -16,6 +30,8 @@ export const AppProvider = ({children}) =>{
     const[user,setUser] = useState(null)
     const[isOwner,setIsOwner] = useState(false)
     const[showLogin,setShowLogin]=useState(false)
+    const[loginRedirectPath,setLoginRedirectPath] = useState(null)
+    const[pendingLoginAction,setPendingLoginAction] = useState(null)
     const[pickupDate,setPickupDate] = useState('')
     const[returnDate,setReturnDate] = useState('')
 
@@ -32,7 +48,11 @@ export const AppProvider = ({children}) =>{
                 navigate('/')
             }
         }catch(error){
-            toast.error(error.message)
+            if (error?.response?.status === 401) {
+                logout(false)
+                setShowLogin(true)
+            }
+            toast.error(getErrorMessage(error))
         }
     }
 
@@ -43,19 +63,52 @@ export const AppProvider = ({children}) =>{
                 const {data} = await axios.get('/api/user/cars')
                 data.success ? setCars(data.cars) : toast.error(data.message)
             }catch(error){
-                toast.error(error.message)
+                toast.error(getErrorMessage(error))
             }
         }
 
         // Function to logout 
-        const logout = ()=>{
+        const logout = (showToast = true)=>{
             localStorage.removeItem('token')
             setToken(null)
             setUser(null)
-            setIsOwner(null)
-            axios.defaults.headers.common['Authorization'] = ''
-            toast.success("You have been logged out")
+            setIsOwner(false)
+            setLoginRedirectPath(null)
+            setPendingLoginAction(null)
+            delete axios.defaults.headers.common['Authorization']
+
+            if (showToast) {
+                toast.success("You have been logged out")
+            }
         }
+
+        const requestLogin = useCallback(({ redirectPath, onSuccess } = {}) => {
+            if (redirectPath) {
+                setLoginRedirectPath(redirectPath)
+            }
+
+            if (onSuccess) {
+                setPendingLoginAction(() => onSuccess)
+            }
+
+            setShowLogin(true)
+        }, [])
+
+        const completeLoginRedirect = useCallback(() => {
+            const redirectPath = loginRedirectPath
+            const action = pendingLoginAction
+
+            setLoginRedirectPath(null)
+            setPendingLoginAction(null)
+
+            if (redirectPath) {
+                navigate(redirectPath)
+            }
+
+            if (action) {
+                setTimeout(action, 0)
+            }
+        }, [loginRedirectPath, navigate, pendingLoginAction])
 
         // useEffect to retrive the token from localStorage
         // useEffect(()=>{
@@ -74,6 +127,23 @@ export const AppProvider = ({children}) =>{
             fetchCars()
         },[])
 
+        useEffect(() => {
+            const interceptorId = axios.interceptors.response.use(
+                (response) => response,
+                (error) => {
+                    if (error?.response?.status === 401) {
+                        error.message = getErrorMessage(error)
+                    }
+
+                    return Promise.reject(error)
+                }
+            )
+
+            return () => {
+                axios.interceptors.response.eject(interceptorId)
+            }
+        }, [])
+
         // useEffect to fetch user data when token is available
         useEffect(()=>{
             if(token){
@@ -85,7 +155,7 @@ export const AppProvider = ({children}) =>{
     const value ={
         navigate , currency,axios , user , setUser,
         token , setToken , isOwner , setIsOwner , fetchUser , showLogin ,
-        setShowLogin , logout , fetchCars , cars , setCars,
+        setShowLogin , requestLogin , completeLoginRedirect , logout , fetchCars , cars , setCars,
         pickupDate , setPickupDate , returnDate , setReturnDate
     }
 

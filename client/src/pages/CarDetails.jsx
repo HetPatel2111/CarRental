@@ -4,7 +4,6 @@ import { assets } from '../assets/assets';
 import Loader from '../components/Loader';
 import { useAppContext } from '../contex/AppContext';
 import toast from 'react-hot-toast'
-import {motion} from 'motion/react'
 
 const loadRazorpayScript = () =>
   new Promise((resolve) => {
@@ -22,11 +21,12 @@ const loadRazorpayScript = () =>
 
 const CarDetails = () => {
   const {id} = useParams();
-  const {cars,axios,user,token,pickupDate,setPickupDate,returnDate,setReturnDate} = useAppContext()
+  const {cars,axios,user,token,pickupDate,setPickupDate,returnDate,setReturnDate,requestLogin} = useAppContext()
 
   const navigate = useNavigate();
   const [car, setCar] = useState(null);
   const [isPaying, setIsPaying] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('online');
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -38,13 +38,31 @@ const CarDetails = () => {
 
     if (!token) {
       toast.error('Please login to continue')
-      navigate('/')
+      requestLogin({ redirectPath: `/car-details/${id}` })
       return
     }
 
     setIsPaying(true)
 
     try{
+      if (paymentMethod === 'offline') {
+        const {data} = await axios.post('/api/bookings/create',{
+          car:id,
+          pickupDate,
+          returnDate,
+          paymentMethod:'offline'
+        })
+
+        if(data.success){
+          toast.success(data.message)
+          navigate('/my-bookings')
+        }else{
+          toast.error(data.message)
+        }
+        setIsPaying(false)
+        return
+      }
+
       const scriptLoaded = await loadRazorpayScript()
 
       if (!scriptLoaded) {
@@ -128,21 +146,9 @@ const CarDetails = () => {
 
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12'>
         {/* Left: Car Image & Details */}
-        <motion.div 
-        initial={{opacity:0,y:30}}
-        animate={{opacity:1,y:0}}
-        transition={{duration:0.6}}
-        className='lg:col-span-2'>
-          <motion.img 
-          initial={{opacity:0,scale:0.98}}
-          animate={{opacity:1,scale:1}}
-          transition={{duration:0.5}}
-          src={car.image} alt="" className='w-full h-auto md:max-h-100 object-cover rounded-xl mb-6 shadow-md'/>
-          <motion.div 
-          initial={{opacity:0}}
-          animate={{opacity:1}}
-          transition={{duration:0.5,delay:0.2}}
-          className='space-y-6'>
+        <div className='lg:col-span-2'>
+          <img src={car.image} alt="" className='w-full h-auto md:max-h-100 object-cover rounded-xl mb-6 shadow-md'/>
+          <div className='space-y-6'>
             <div>
               <h1 className='text-3xl font-bold'>{car.brand}{car.model}</h1>
               <p className='text-gray-500 text-lg'>{car.category} {car.year}</p>
@@ -156,14 +162,10 @@ const CarDetails = () => {
                 {icon: assets.car_icon , text: car.transmission},
                 {icon: assets.location_icon , text: car.location},
               ].map(({icon,text})=>(
-                <motion.div 
-                initial={{opacity:0,y:10}}
-                animate={{opacity:1,y:0}}
-                transition={{duration:0.4,}}
-                key={text} className='flex flex-col items-center bg-light p-4 rounded-lg'>
+                <div key={text} className='flex flex-col items-center bg-light p-4 rounded-lg'>
                     <img src={icon} alt="" className='h-5 mb-2'/>
                     {text}
-                </motion.div>
+                </div>
               ))}
             </div>
 
@@ -188,15 +190,11 @@ const CarDetails = () => {
                 </ul>
               </div>
 
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
 
         {/* Right: Booking Form */}
-        <motion.form 
-        initial={{opacity:0,y:30}}
-        animate={{opacity:1,y:0}}
-        transition={{duration:0.6,delay:0.3}}
-        onSubmit={handleSubmit} className='shadow-lg h-max sticky top-18 rounded-xl p-6 space-y-6
+        <form onSubmit={handleSubmit} className='shadow-lg h-max sticky top-18 rounded-xl p-6 space-y-6
         text-gray-600'>
           <p className='flex items-center justify-between text-2xl text-gray-800
           font-semibold'>{currency}{car.pricePerDay} <span className='text-base text-gray-400 font-normal'>Per day</span>
@@ -216,10 +214,33 @@ const CarDetails = () => {
             <input type="date" required id="return-date"  min={pickupDate || today} value={returnDate} onChange={(e) => setReturnDate(e.target.value)} className='border border-borderColor px-3 py-2 rounded-lg'/>
           </div>
 
-          <button disabled={isPaying} className='w-full bg-primary hover:bg-primary-dull transition-all py-3 font-medium text-white rounded-xl cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed'>{isPaying ? 'Processing...' : 'Pay & Book Now'}</button>
+          <div className='space-y-3'>
+            <p className='font-medium text-gray-800'>Payment Method</p>
+            <div className='grid grid-cols-2 gap-3'>
+              {[
+                {value:'online', label:'Online', description:'Pay now with Razorpay'},
+                {value:'offline', label:'Offline', description:'Pay at pickup'}
+              ].map((method)=>(
+                <label key={method.value} className={`cursor-pointer rounded-xl border p-4 transition ${paymentMethod === method.value ? 'border-primary bg-primary/5 text-primary' : 'border-borderColor text-gray-600 hover:border-primary/60'}`}>
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value={method.value}
+                    checked={paymentMethod === method.value}
+                    onChange={(e)=>setPaymentMethod(e.target.value)}
+                    className='sr-only'
+                  />
+                  <span className='block font-semibold'>{method.label}</span>
+                  <span className='mt-1 block text-xs text-gray-500'>{method.description}</span>
+                </label>
+              ))}
+            </div>
+          </div>
 
-          <p className='text-center text-sm'>Secure payment powered by Razorpay</p>
-        </motion.form>
+          <button disabled={isPaying} className='w-full bg-primary hover:bg-primary-dull transition-all py-3 font-medium text-white rounded-xl cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed'>{isPaying ? 'Processing...' : paymentMethod === 'online' ? 'Pay & Book Now' : 'Request Booking'}</button>
+
+          <p className='text-center text-sm'>{paymentMethod === 'online' ? 'Secure payment powered by Razorpay' : 'Your booking will stay pending until offline payment is confirmed.'}</p>
+        </form>
       </div>
     </div>
   ) : <Loader />

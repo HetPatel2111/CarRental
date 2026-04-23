@@ -6,7 +6,8 @@ import {
     getUserBookings,
     getOwnerBookings,
     changeBookingStatus,
-    checkAvailbilityOfCar
+    checkAvailbilityOfCar,
+    cancelBooking
 } from "../controllers/bookingController.js"
 import {protect} from "../middleware/auth.js"
 
@@ -20,5 +21,6 @@ bookingRouter.post('/verify-payment', protect , verifyBookingPayment)
 bookingRouter.get('/user' ,protect ,getUserBookings)
 bookingRouter.get('/owner' , protect , getOwnerBookings)
 bookingRouter.post('/change-status' , protect , changeBookingStatus)
+bookingRouter.delete('/:id', protect, cancelBooking)
 
 export default bookingRouter

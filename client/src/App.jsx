@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import Navbar from './components/Navbar'
 import { Route, Routes, useLocation } from 'react-router-dom';
 import Home from './pages/Home'
@@ -12,6 +12,7 @@ import AddCar from './pages/owner/AddCar';
 import ManageCars from './pages/owner/ManageCars';
 import ManageBooking from './pages/owner/ManageBookings';
 import Login from './components/Login';
+import Chatbot from './components/Chatbot';
 import {Toaster} from "react-hot-toast"
 import { useAppContext } from './contex/AppContext';
 
@@ -45,6 +46,7 @@ const App = () => {
       </Routes>
 
       {!isOwnerPath && <Footer />}
+      {!isOwnerPath && <Chatbot />}
       
     </>
   )

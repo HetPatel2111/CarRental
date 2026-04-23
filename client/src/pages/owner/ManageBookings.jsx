@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import Title from '../../components/owner/Title'
 import {useAppContext} from '../../contex/AppContext'
 import toast from 'react-hot-toast'
@@ -9,14 +9,14 @@ const ManageBookings = () => {
   
   const [bookings , setBookings] = useState([])
 
-  const fetchOwnerBookings = async()=>{
+  const fetchOwnerBookings = useCallback(async()=>{
     try{
       const {data} = await axios.get('/api/bookings/owner')
       data.success ? setBookings(data.bookings) : toast.error(data.message)
     } catch(error){
       toast.error(error.message)
     }
-  }
+  }, [axios])
 
   const changeBookingStatus = async(bookingId , status)=>{
     try{
@@ -34,8 +34,9 @@ const ManageBookings = () => {
   }
 
   useEffect(()=>{
-    fetchOwnerBookings()
-  },[])
+    const timerId = setTimeout(fetchOwnerBookings, 0)
+    return () => clearTimeout(timerId)
+  },[fetchOwnerBookings])
   
   return (
     <div className='px-4 pt-10 md:px-10 w-full'>
@@ -86,8 +87,8 @@ const ManageBookings = () => {
                   </td>
 
                   <td className='p-3 whitespace-nowrap'>
-                    <span className='bg-gray-100 px-3 py-1 rounded-full text-xs'>
-                      offline
+                    <span className={`px-3 py-1 rounded-full text-xs ${booking.paymentMethod === 'online' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}>
+                      {booking.paymentMethod || 'offline'} - {booking.paymentStatus || 'pending'}
                     </span>
                   </td>
 

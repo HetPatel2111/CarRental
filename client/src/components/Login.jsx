@@ -1,13 +1,11 @@
 import React from 'react'
 import { useAppContext } from '../contex/AppContext';
 import {toast} from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
 
-  const {setShowLogin , axios , setToken} = useAppContext()
+  const {setShowLogin , axios , setToken, completeLoginRedirect} = useAppContext()
 
-  const navigate = useNavigate()
   const [state, setState] = React.useState("login");
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
@@ -20,7 +18,7 @@ const Login = () => {
         email,password})
 
         if(data.success){
-            navigate('/')
+            axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
             setToken(data.token)
             localStorage.setItem('token',data.token)
             toast.success(
@@ -29,6 +27,7 @@ const Login = () => {
                 : "Account created successfully"
             );
             setShowLogin(false)
+            completeLoginRedirect()
         }else{
             toast.error(data.message)
         }

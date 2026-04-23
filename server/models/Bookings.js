@@ -46,6 +46,11 @@ const bookingSchema = new mongoose.Schema({
         type: String,
         enum: ["pending", "paid", "failed"],
         default: "pending"
+    },
+    paymentMethod: {
+        type: String,
+        enum: ["online", "offline"],
+        default: "offline"
     }
 },{timestamps:true})
 

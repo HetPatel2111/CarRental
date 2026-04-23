@@ -3,16 +3,17 @@ import Booking from "../models/Bookings.js";
 import Car from "../models/Car.js";
 
 // Function to check Availbility of car for a given Date
-const checkAvailbility = async(car,pickupDate , returnDate)=>{
+export const checkAvailbility = async(car,pickupDate , returnDate)=>{
     const bookings = await Booking.find({
         car,
+        status: { $ne: "cancelled" },
         pickupDate:{$lte:returnDate},
         returnDate:{$gte:pickupDate}
     })
     return bookings.length === 0;
 }
 
-const calculateBookingPrice = (pricePerDay, pickupDate, returnDate) => {
+export const calculateBookingPrice = (pricePerDay, pickupDate, returnDate) => {
     const picked = new Date(pickupDate)
     const returned = new Date(returnDate)
     const diffInMs = returned - picked
@@ -91,7 +92,11 @@ export const checkAvailbilityOfCar = async(req,res)=>{
 export const createBooking = async(req,res)=>{
     try{
         const {_id} = req.user
-        const {car,pickupDate,returnDate} = req.body
+        const {car,pickupDate,returnDate,paymentMethod = "offline"} = req.body
+
+        if(paymentMethod !== "offline"){
+            return res.json({success:false , message:"Use online payment to pay now, or choose offline payment."})
+        }
 
         const isAvaliable = await checkAvailbility(car,pickupDate,returnDate)
 
@@ -113,10 +118,13 @@ export const createBooking = async(req,res)=>{
             user:_id,
             pickupDate,
             returnDate,
-            price
+            price,
+            paymentMethod:"offline",
+            paymentStatus:"pending",
+            status:"pending"
         })
 
-        res.json({success:true, message:"Booking Created"})
+        res.json({success:true, message:"Booking request created. Payment is pending offline."})
 
     }catch(error){
         console.log(error.message)
@@ -220,6 +228,7 @@ export const verifyBookingPayment = async(req,res)=>{
             paymentId: razorpay_payment_id,
             orderId: razorpay_order_id,
             paymentStatus: "paid",
+            paymentMethod: "online",
             status: "confirmed"
         })
 
@@ -283,6 +292,40 @@ export const changeBookingStatus = async(req,res)=>{
 
        res.json({success:true , message:"Status Updated"})
     }catch(error) {
+        console.log(error.message)
+        res.json({ success: false, message: error.message })
+    }
+}
+
+export const cancelBooking = async (req, res) => {
+    try {
+        const booking = await Booking.findById(req.params.id).populate("car")
+
+        if (!booking) {
+            return res.json({ success: false, message: "Booking not found" })
+        }
+
+        if (booking.user.toString() !== req.user._id.toString()) {
+            return res.json({ success: false, message: "Unauthorized" })
+        }
+
+        if (booking.status === "cancelled") {
+            return res.json({ success: true, message: "Booking is already cancelled", booking })
+        }
+
+        booking.status = "cancelled"
+        if (booking.paymentStatus === "pending") {
+            booking.paymentStatus = "failed"
+        }
+
+        await booking.save()
+
+        res.json({
+            success: true,
+            message: "Booking cancelled successfully",
+            booking
+        })
+    } catch (error) {
         console.log(error.message)
         res.json({ success: false, message: error.message })
     }
