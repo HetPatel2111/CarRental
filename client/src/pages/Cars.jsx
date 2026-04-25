@@ -23,6 +23,7 @@ const Cars = () => {
 
   const [input,setInput] = useState(queryText)
   const [sourceCars,setSourceCars] = useState([])
+  const [loading,setLoading] = useState(false)
 
   const isSearchData = pickupLocation && pickupDate && returnDate
   const chatFilters = useMemo(() => ({
@@ -41,6 +42,7 @@ const Cars = () => {
 
   const searchCarAvailability = async()=>{
     try{
+      setLoading(true)
       const {data} = await axios.post('/api/bookings/check-availability',
       {location:pickupLocation , pickupDate , returnDate})
 
@@ -57,6 +59,36 @@ const Cars = () => {
     }catch(error){
       toast.error(error.message)
       setSourceCars([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchFilteredCars = async () => {
+    try {
+      setLoading(true)
+      const params = {}
+
+      if (input.trim()) params.q = input.trim()
+      if (chatFilters.location) params.location = chatFilters.location
+      if (chatFilters.category) params.category = chatFilters.category
+      if (chatFilters.transmission) params.transmission = chatFilters.transmission
+      if (chatFilters.fuelType) params.fuelType = chatFilters.fuelType
+      if (chatFilters.minSeats) params.minSeats = chatFilters.minSeats
+      if (chatFilters.maxPrice) params.maxPrice = chatFilters.maxPrice
+      if (chatFilters.sortBy) params.sortBy = chatFilters.sortBy
+
+      const { data } = await axios.get('/api/user/cars', { params })
+
+      if (data.success) {
+        setSourceCars(data.cars)
+      } else {
+        toast.error(data.message || 'Unable to search cars')
+      }
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -66,72 +98,16 @@ const Cars = () => {
       return
     }
 
-    setSourceCars(cars)
-  },[cars, isSearchData, pickupLocation, pickupDate, returnDate])
+    fetchFilteredCars()
+  },[cars, isSearchData, pickupLocation, pickupDate, returnDate, input, chatFilters.location, chatFilters.category, chatFilters.transmission, chatFilters.fuelType, chatFilters.minSeats, chatFilters.maxPrice, chatFilters.sortBy])
 
   const filteredCars = useMemo(() => {
-    const normalizedInput = input.trim().toLowerCase()
-
-    const filtered = sourceCars.filter((car) => {
-      if (chatFilters.location && car.location.toLowerCase() !== chatFilters.location.toLowerCase()) {
-        return false
-      }
-
-      if (chatFilters.category && car.category.toLowerCase() !== chatFilters.category.toLowerCase()) {
-        return false
-      }
-
-      if (chatFilters.transmission && !car.transmission.toLowerCase().includes(chatFilters.transmission.toLowerCase())) {
-        return false
-      }
-
-      if (chatFilters.fuelType && car.fuel_type.toLowerCase() !== chatFilters.fuelType.toLowerCase()) {
-        return false
-      }
-
-      if (chatFilters.minSeats && car.seating_capacity < chatFilters.minSeats) {
-        return false
-      }
-
-      if (chatFilters.maxPrice && car.pricePerDay > chatFilters.maxPrice) {
-        return false
-      }
-
-      if (recommendedIds.length > 0 && !recommendedIds.includes(car._id)) {
-        return false
-      }
-
-      if (!normalizedInput) {
-        return true
-      }
-
-      const searchableText = [
-        car.brand,
-        car.model,
-        car.category,
-        car.transmission,
-        car.fuel_type,
-        car.location,
-        car.description
-      ].join(' ').toLowerCase()
-
-      return searchableText.includes(normalizedInput)
-    })
-
-    if (chatFilters.sortBy === 'priceAsc') {
-      return filtered.sort((a, b) => a.pricePerDay - b.pricePerDay)
+    if (recommendedIds.length === 0) {
+      return sourceCars
     }
 
-    if (chatFilters.sortBy === 'priceDesc') {
-      return filtered.sort((a, b) => b.pricePerDay - a.pricePerDay)
-    }
-
-    if (chatFilters.sortBy === 'newest') {
-      return filtered.sort((a, b) => b.year - a.year)
-    }
-
-    return filtered
-  }, [sourceCars, input, chatFilters, recommendedIds])
+    return sourceCars.filter((car) => recommendedIds.includes(car._id))
+  }, [sourceCars, recommendedIds])
 
   const activeFilters = [
     chatFilters.location && `Location: ${chatFilters.location}`,
@@ -172,6 +148,7 @@ const Cars = () => {
       transition={{duration:0.5,delay:0.6}}
       className='px-6 md:px-16 lg:px-24 xl:px-32 mt-10'>
         <p className='text-gray-500 xl:px-20 max-w-7xl mx-auto'>Showing {filteredCars.length} Cars</p>
+        {loading && <p className='mt-3 text-sm text-gray-400 xl:px-20 max-w-7xl mx-auto'>Refreshing search results...</p>}
 
         {activeFilters.length > 0 && (
           <div className='mt-4 flex flex-wrap items-center gap-3 xl:px-20 max-w-7xl mx-auto'>

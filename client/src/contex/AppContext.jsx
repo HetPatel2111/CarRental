@@ -14,6 +14,10 @@ const getErrorMessage = (error) => {
         return responseMessage
     }
 
+    if (error?.response?.status === 429) {
+        return "Too many attempts for now. Please wait a few minutes and try again."
+    }
+
     if (error?.response?.status === 401) {
         return "Please log in to continue."
     }
@@ -29,6 +33,7 @@ export const AppProvider = ({children}) =>{
     const [token,setToken] = useState(null)
     const[user,setUser] = useState(null)
     const[isOwner,setIsOwner] = useState(false)
+    const[isAdmin,setIsAdmin] = useState(false)
     const[showLogin,setShowLogin]=useState(false)
     const[loginRedirectPath,setLoginRedirectPath] = useState(null)
     const[pendingLoginAction,setPendingLoginAction] = useState(null)
@@ -44,6 +49,7 @@ export const AppProvider = ({children}) =>{
             if(data.success){
                 setUser(data.user)
                 setIsOwner(data.user.role === 'owner')
+                setIsAdmin(data.user.role === 'admin')
             }else{
                 navigate('/')
             }
@@ -73,6 +79,7 @@ export const AppProvider = ({children}) =>{
             setToken(null)
             setUser(null)
             setIsOwner(false)
+            setIsAdmin(false)
             setLoginRedirectPath(null)
             setPendingLoginAction(null)
             delete axios.defaults.headers.common['Authorization']
@@ -131,7 +138,7 @@ export const AppProvider = ({children}) =>{
             const interceptorId = axios.interceptors.response.use(
                 (response) => response,
                 (error) => {
-                    if (error?.response?.status === 401) {
+                    if (error?.response?.status === 401 || error?.response?.status === 429) {
                         error.message = getErrorMessage(error)
                     }
 
@@ -154,9 +161,9 @@ export const AppProvider = ({children}) =>{
     
     const value ={
         navigate , currency,axios , user , setUser,
-        token , setToken , isOwner , setIsOwner , fetchUser , showLogin ,
+        token , setToken , isOwner , setIsOwner , isAdmin , setIsAdmin , fetchUser , showLogin ,
         setShowLogin , requestLogin , completeLoginRedirect , logout , fetchCars , cars , setCars,
-        pickupDate , setPickupDate , returnDate , setReturnDate
+        pickupDate , setPickupDate , returnDate , setReturnDate , getErrorMessage
     }
 
     return (

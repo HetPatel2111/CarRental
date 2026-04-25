@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { assets } from '../../assets/assets'
 import Title from '../../components/owner/Title'
 import { useAppContext } from '../../contex/AppContext'
@@ -17,7 +17,6 @@ const formatDate = (date) => {
 const getStatusStyle = (status) => {
   if (status === 'confirmed') return 'bg-emerald-100 text-emerald-700'
   if (status === 'cancelled') return 'bg-rose-100 text-rose-700'
-
   return 'bg-amber-100 text-amber-700'
 }
 
@@ -39,7 +38,6 @@ const buildRevenueBars = (bookings) => {
 
 const Dashboard = () => {
   const { axios, isOwner, currency } = useAppContext()
-
   const [data, setData] = useState({
     totalCars: 0,
     totalBookings: 0,
@@ -49,9 +47,14 @@ const Dashboard = () => {
     monthlyRevenue: 0
   })
   const [bookings, setBookings] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [search, setSearch] = useState('')
+  const [lastUpdated, setLastUpdated] = useState(null)
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = async () => {
     try {
+      setLoading(true)
       const [{ data: dashboardResponse }, { data: bookingsResponse }] = await Promise.all([
         axios.get('/api/owner/dashboard'),
         axios.get('/api/bookings/owner')
@@ -65,20 +68,22 @@ const Dashboard = () => {
 
       if (bookingsResponse.success) {
         setBookings(bookingsResponse.bookings)
+        setLastUpdated(new Date())
       } else {
         toast.error(bookingsResponse.message)
       }
     } catch (error) {
       toast.error(error.message)
+    } finally {
+      setLoading(false)
     }
-  }, [axios])
+  }
 
   useEffect(() => {
     if (isOwner) {
-      const timerId = setTimeout(fetchDashboardData, 0)
-      return () => clearTimeout(timerId)
+      fetchDashboardData()
     }
-  }, [fetchDashboardData, isOwner])
+  }, [isOwner])
 
   const insights = useMemo(() => {
     const confirmedBookings = bookings.filter((booking) => booking.status === 'confirmed')
@@ -111,8 +116,24 @@ const Dashboard = () => {
     }
   }, [bookings])
 
-  const maxRevenue = Math.max(...insights.revenueBars.map((bar) => bar.value), 1)
+  const filteredBookings = useMemo(() => {
+    const query = search.trim().toLowerCase()
 
+    return bookings.filter((booking) => {
+      const matchesQuery = !query || [
+        booking.user?.name,
+        booking.user?.email,
+        booking.car?.brand,
+        booking.car?.model,
+        booking.car?.category
+      ].join(' ').toLowerCase().includes(query)
+
+      const matchesStatus = statusFilter === 'all' || booking.status === statusFilter
+      return matchesQuery && matchesStatus
+    })
+  }, [bookings, search, statusFilter])
+
+  const maxRevenue = Math.max(...insights.revenueBars.map((bar) => bar.value), 1)
   const dashboardCards = [
     { title: 'Total Revenue', value: `${currency}${insights.totalRevenue || data.monthlyRevenue}`, detail: 'Confirmed earnings', icon: assets.dashboardIconColored },
     { title: 'Total Cars', value: data.totalCars, detail: 'Cars listed by you', icon: assets.carIconColored },
@@ -132,13 +153,17 @@ const Dashboard = () => {
             </p>
             <Title
               title='Advanced Dashboard'
-              subTitle='Monitor earnings, transaction history, booking performance, and car-wise rental activity from one clean workspace.'
+              subTitle='Monitor earnings, booking health, and car-wise rental activity from a more interactive owner workspace.'
             />
+            <p className='mt-4 text-xs text-blue-200'>{lastUpdated ? `Last refresh ${lastUpdated.toLocaleTimeString('en-IN')}` : 'Waiting for first refresh'}</p>
           </div>
           <div className='rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur'>
             <p className='text-blue-100'>Average confirmed booking</p>
             <h2 className='mt-2 text-4xl font-semibold'>{currency}{insights.averageBooking}</h2>
             <p className='mt-3 text-sm text-blue-100'>{insights.confirmedBookings.length} confirmed bookings are generating owner revenue.</p>
+            <button onClick={fetchDashboardData} className='mt-4 rounded-2xl bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20'>
+              Refresh Dashboard
+            </button>
           </div>
         </div>
       </section>
@@ -205,7 +230,7 @@ const Dashboard = () => {
                 <img src={item.car?.image} alt='' className='h-16 w-20 rounded-xl object-cover' />
                 <div className='min-w-0 flex-1'>
                   <p className='truncate font-semibold text-slate-900'>{item.car?.brand} {item.car?.model}</p>
-                  <p className='text-xs text-gray-500'>{item.bookings} bookings - {item.car?.location}</p>
+                  <p className='text-xs text-gray-500'>{item.bookings} bookings • {item.car?.location}</p>
                   <p className='mt-2 font-semibold text-primary'>{currency}{item.revenue}</p>
                 </div>
               </div>
@@ -216,8 +241,26 @@ const Dashboard = () => {
 
       <div className='mt-6 overflow-hidden rounded-3xl border border-borderColor bg-white shadow-sm'>
         <div className='border-b border-borderColor p-6'>
-          <h2 className='text-xl font-semibold text-slate-950'>Transaction history</h2>
-          <p className='text-gray-500'>Latest booking payments and customer activity</p>
+          <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
+            <div>
+              <h2 className='text-xl font-semibold text-slate-950'>Transaction history</h2>
+              <p className='text-gray-500'>Latest booking payments and customer activity</p>
+            </div>
+            <div className='flex flex-col gap-3 md:flex-row'>
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder='Search customer or car'
+                className='rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none'
+              />
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className='rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none'>
+                <option value='all'>All statuses</option>
+                <option value='pending'>Pending</option>
+                <option value='confirmed'>Confirmed</option>
+                <option value='cancelled'>Cancelled</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div className='overflow-x-auto'>
           <table className='min-w-200 w-full text-left text-sm'>
@@ -232,7 +275,11 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {bookings.slice(0, 8).map((booking) => (
+              {loading ? (
+                <tr>
+                  <td colSpan='6' className='p-8 text-center text-gray-500'>Loading transactions...</td>
+                </tr>
+              ) : filteredBookings.length ? filteredBookings.slice(0, 10).map((booking) => (
                 <tr key={booking._id} className='border-t border-borderColor'>
                   <td className='p-4'>
                     <p className='font-medium text-slate-900'>{booking.user?.name || 'Customer'}</p>
@@ -251,14 +298,18 @@ const Dashboard = () => {
                   <td className='p-4 font-semibold text-primary'>{currency}{booking.price}</td>
                   <td className='p-4'>
                     <span className={`rounded-full px-3 py-1 text-xs font-semibold ${booking.paymentMethod === 'online' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
-                      {booking.paymentMethod || 'offline'} - {booking.paymentStatus || 'pending'}
+                      {booking.paymentMethod || 'offline'} • {booking.paymentStatus || 'pending'}
                     </span>
                   </td>
                   <td className='p-4'>
                     <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusStyle(booking.status)}`}>{booking.status}</span>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan='6' className='p-8 text-center text-gray-500'>No transactions match these filters.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

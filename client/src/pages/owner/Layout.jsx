@@ -4,23 +4,26 @@ import { Outlet } from 'react-router-dom'
 import NavbarOwner from '../../components/owner/NavbarOwner'
 import { useAppContext } from '../../contex/AppContext'
 
-const Layout = () => {
+const Layout = ({ requiredRole = 'owner', basePath = '/owner' }) => {
 
-  const {isOwner , user , navigate, requestLogin} = useAppContext()
+  const {isOwner , isAdmin, user , navigate, requestLogin} = useAppContext()
 
   useEffect(()=>{
     if(!user){
       if (!localStorage.getItem('token')) {
-        requestLogin({ redirectPath: '/owner' })
+        requestLogin({ redirectPath: basePath })
         navigate('/')
       }
       return
     }
 
-    if(!isOwner){
+    const roleAllowed =
+      requiredRole === 'admin' ? isAdmin : isOwner
+
+    if(!roleAllowed){
       navigate('/')
     }
-  }, [isOwner, navigate, requestLogin, user])
+  }, [basePath, isAdmin, isOwner, navigate, requestLogin, requiredRole, user])
 
   return (
     <div className='flex flex-col'>

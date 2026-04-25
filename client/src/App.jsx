@@ -11,6 +11,10 @@ import Dashboard from './pages/owner/Dashboard';
 import AddCar from './pages/owner/AddCar';
 import ManageCars from './pages/owner/ManageCars';
 import ManageBooking from './pages/owner/ManageBookings';
+import AdminDashboard from './pages/admin/Dashboard';
+import PricingRules from './pages/admin/PricingRules';
+import Coupons from './pages/admin/Coupons';
+import Settlements from './pages/admin/Settlements';
 import Login from './components/Login';
 import Chatbot from './components/Chatbot';
 import {Toaster} from "react-hot-toast"
@@ -19,13 +23,14 @@ import { useAppContext } from './contex/AppContext';
 const App = () => {
 
   const {showLogin} = useAppContext()
-  const isOwnerPath = useLocation().pathname.startsWith('/owner')
+  const pathname = useLocation().pathname
+  const isWorkspacePath = pathname.startsWith('/owner') || pathname.startsWith('/admin')
 
   return (
     <>
       <Toaster />
       {showLogin && <Login/>}
-      {!isOwnerPath && <Navbar/>}
+      {!isWorkspacePath && <Navbar/>}
 
       <Routes> 
         <Route path='/' element={<Home/>}/>
@@ -33,11 +38,18 @@ const App = () => {
         <Route path='/cars' element={<Cars/>}/>
         <Route path='/my-bookings' element={<MyBookings />}/>
 
-        <Route path='/owner' element={<Layout />}>
+        <Route path='/owner' element={<Layout requiredRole='owner' basePath='/owner' />}>
           <Route index element={<Dashboard />}/>
           <Route path='add-car' element={<AddCar />}/>
           <Route path='manage-cars' element={<ManageCars />}/>
           <Route path='manage-bookings' element={<ManageBooking />}/>
+        </Route>
+
+        <Route path='/admin' element={<Layout requiredRole='admin' basePath='/admin' />}>
+          <Route index element={<AdminDashboard />}/>
+          <Route path='pricing-rules' element={<PricingRules />}/>
+          <Route path='coupons' element={<Coupons />}/>
+          <Route path='settlements' element={<Settlements />}/>
         </Route>
         
         <Route />
@@ -45,8 +57,8 @@ const App = () => {
         <Route />
       </Routes>
 
-      {!isOwnerPath && <Footer />}
-      {!isOwnerPath && <Chatbot />}
+      {!isWorkspacePath && <Footer />}
+      {!isWorkspacePath && <Chatbot />}
       
     </>
   )

@@ -19,6 +19,8 @@ const loadRazorpayScript = () =>
     document.body.appendChild(script)
   })
 
+const formatCurrency = (currency, value) => `${currency}${Number(value || 0).toLocaleString('en-IN')}`
+
 const CarDetails = () => {
   const {id} = useParams();
   const {cars,axios,user,token,pickupDate,setPickupDate,returnDate,setReturnDate,requestLogin} = useAppContext()
@@ -27,11 +29,47 @@ const CarDetails = () => {
   const [car, setCar] = useState(null);
   const [isPaying, setIsPaying] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('online');
+  const [pricingPreview, setPricingPreview] = useState(null);
+  const [pricingError, setPricingError] = useState('');
+  const [isPricingLoading, setIsPricingLoading] = useState(false);
+  const [showPriceBreakdown, setShowPriceBreakdown] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCouponCode, setAppliedCouponCode] = useState('');
+  const [couponFeedback, setCouponFeedback] = useState('');
 
   const today = new Date().toISOString().split("T")[0];
 
 
   const currency = import.meta.env.VITE_CURRENCY
+
+  const pricingRows = pricingPreview
+    ? [
+        { label: `Base rent (${pricingPreview.rentalDays} days)`, value: pricingPreview.basePrice },
+        { label: 'Weekend surcharge', value: pricingPreview.weekendSurcharge },
+        { label: 'Festival surcharge', value: pricingPreview.festivalSurcharge },
+        { label: 'Trending surcharge', value: pricingPreview.trendingSurcharge },
+        { label: 'High-demand surcharge', value: pricingPreview.demandSurcharge },
+        { label: 'Low-inventory surcharge', value: pricingPreview.inventorySurcharge },
+        { label: 'Last-minute surcharge', value: pricingPreview.lastMinuteSurcharge },
+        { label: 'Service fee', value: pricingPreview.serviceFee },
+      ].filter((item) => item.value > 0)
+    : []
+
+  const requestPricingPreview = async (couponCode = appliedCouponCode) => {
+    const normalizedCouponCode = couponCode.trim().toUpperCase()
+    const { data } = await axios.post('/api/bookings/pricing-preview', {
+      car: id,
+      pickupDate,
+      returnDate,
+      couponCode: normalizedCouponCode
+    })
+
+    if (!data.success) {
+      throw new Error(data.message || 'Unable to calculate pricing right now.')
+    }
+
+    return data.pricing
+  }
 
   const handleSubmit = async(e) =>{
     e.preventDefault();
@@ -50,7 +88,8 @@ const CarDetails = () => {
           car:id,
           pickupDate,
           returnDate,
-          paymentMethod:'offline'
+          paymentMethod:'offline',
+          couponCode: appliedCouponCode
         })
 
         if(data.success){
@@ -67,17 +106,20 @@ const CarDetails = () => {
 
       if (!scriptLoaded) {
         toast.error('Razorpay checkout failed to load')
+        setIsPaying(false)
         return
       }
 
       const {data} = await axios.post('/api/bookings/create-order',{
         car:id,
         pickupDate,
-        returnDate
+        returnDate,
+        couponCode: appliedCouponCode
       })
 
       if(!data.success){
         toast.error(data.message)
+        setIsPaying(false)
         return
       }
 
@@ -94,6 +136,7 @@ const CarDetails = () => {
               car: id,
               pickupDate,
               returnDate,
+              couponCode: appliedCouponCode,
               ...response
             })
 
@@ -135,6 +178,86 @@ const CarDetails = () => {
   useEffect(()=>{
     setCar(cars.find(car => car._id == id))
   },[cars , id])
+
+  useEffect(() => {
+    let isActive = true
+
+    if (!id || !pickupDate || !returnDate) {
+      setPricingPreview(null)
+      setPricingError('')
+      setIsPricingLoading(false)
+      setShowPriceBreakdown(false)
+      setCouponFeedback('')
+      return () => {
+        isActive = false
+      }
+    }
+
+    const fetchPricingPreview = async () => {
+      setIsPricingLoading(true)
+      setPricingError('')
+
+      try {
+        const pricing = await requestPricingPreview(appliedCouponCode)
+
+        if (!isActive) return
+        setPricingPreview(pricing)
+      } catch (error) {
+        if (!isActive) return
+        setPricingPreview(null)
+        setPricingError(error.response?.data?.message || error.message || 'Unable to calculate pricing right now.')
+        setShowPriceBreakdown(false)
+      } finally {
+        if (isActive) {
+          setIsPricingLoading(false)
+        }
+      }
+    }
+
+    fetchPricingPreview()
+
+    return () => {
+      isActive = false
+    }
+  }, [axios, id, pickupDate, returnDate, appliedCouponCode])
+
+  const applyCoupon = async () => {
+    const normalizedCouponCode = couponInput.trim().toUpperCase()
+
+    if (!normalizedCouponCode) {
+      toast.error('Enter a coupon code first')
+      return
+    }
+
+    if (!pickupDate || !returnDate) {
+      toast.error('Select pickup and return dates before applying a coupon')
+      return
+    }
+
+    setIsPricingLoading(true)
+    setPricingError('')
+
+    try {
+      const pricing = await requestPricingPreview(normalizedCouponCode)
+      setPricingPreview(pricing)
+      setAppliedCouponCode(normalizedCouponCode)
+      setCouponInput(normalizedCouponCode)
+      setCouponFeedback(`Coupon ${normalizedCouponCode} applied`)
+      toast.success(`Coupon ${normalizedCouponCode} applied`)
+    } catch (error) {
+      setCouponFeedback(error.response?.data?.message || error.message || 'Unable to apply coupon')
+      toast.error(error.response?.data?.message || error.message || 'Unable to apply coupon')
+    } finally {
+      setIsPricingLoading(false)
+    }
+  }
+
+  const removeCoupon = () => {
+    setAppliedCouponCode('')
+    setCouponInput('')
+    setCouponFeedback('')
+    setShowPriceBreakdown(false)
+  }
 
   return car ? (
     <div className='px-6 md:px-16 lg:px-24 xl:px-32 mt-16'>
@@ -196,9 +319,29 @@ const CarDetails = () => {
         {/* Right: Booking Form */}
         <form onSubmit={handleSubmit} className='shadow-lg h-max sticky top-18 rounded-xl p-6 space-y-6
         text-gray-600'>
-          <p className='flex items-center justify-between text-2xl text-gray-800
-          font-semibold'>{currency}{car.pricePerDay} <span className='text-base text-gray-400 font-normal'>Per day</span>
-          </p>
+          <div className='rounded-2xl bg-light p-4'>
+            <div className='flex items-start justify-between gap-4'>
+              <div>
+                <p className='text-sm text-gray-500'>Estimated total</p>
+                <p className='mt-1 text-3xl font-semibold text-gray-800'>
+                  {isPricingLoading
+                    ? 'Calculating...'
+                    : pricingPreview
+                      ? formatCurrency(currency, pricingPreview.finalPrice)
+                      : formatCurrency(currency, car.pricePerDay)}
+                </p>
+                <p className='mt-1 text-sm text-gray-500'>
+                  {pricingPreview
+                    ? `${pricingPreview.rentalDays} billed day${pricingPreview.rentalDays > 1 ? 's' : ''}`
+                    : 'Select dates to see final total'}
+                </p>
+              </div>
+              <p className='text-right text-sm text-gray-500'>
+                {formatCurrency(currency, car.pricePerDay)}
+                <span className='block text-xs text-gray-400'>base per day</span>
+              </p>
+            </div>
+          </div>
 
           <hr className='border-borderColor my-6'/>
 
@@ -209,10 +352,111 @@ const CarDetails = () => {
           </div>
 
           <div className='flex flex-col gap-2'>
-            <label htmlFor="return-date">Pick up Date</label>
+            <label htmlFor="return-date">Return Date</label>
             {/* <input type="date" className='border border-borderColor px-3 py-2 rounded-lg' required id ='return-date' min={new Date().toISOString().split('T')[0]}/> */}
             <input type="date" required id="return-date"  min={pickupDate || today} value={returnDate} onChange={(e) => setReturnDate(e.target.value)} className='border border-borderColor px-3 py-2 rounded-lg'/>
           </div>
+
+          <div className='space-y-3 rounded-2xl border border-slate-200 bg-white p-4'>
+            <div className='flex items-center justify-between gap-3'>
+              <div>
+                <p className='text-base font-semibold text-gray-800'>Coupon code</p>
+                <p className='text-sm text-gray-500'>Apply a valid coupon before payment.</p>
+              </div>
+              {appliedCouponCode && (
+                <span className='rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700'>
+                  Applied: {appliedCouponCode}
+                </span>
+              )}
+            </div>
+
+            <div className='flex flex-col gap-3 md:flex-row'>
+              <input
+                type='text'
+                placeholder='Enter coupon code'
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                className='flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 uppercase outline-none'
+              />
+              <div className='flex gap-2'>
+                <button
+                  type='button'
+                  onClick={applyCoupon}
+                  disabled={isPricingLoading}
+                  className='rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400'
+                >
+                  Apply
+                </button>
+                {appliedCouponCode && (
+                  <button
+                    type='button'
+                    onClick={removeCoupon}
+                    className='rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700'
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {couponFeedback && (
+              <p className={`text-sm ${appliedCouponCode ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {couponFeedback}
+              </p>
+            )}
+
+            {pricingPreview?.couponMessage && appliedCouponCode && (
+              <p className='text-xs text-gray-500'>{pricingPreview.couponMessage}</p>
+            )}
+          </div>
+
+          {pricingError && (
+            <div className='rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600'>
+              {pricingError}
+            </div>
+          )}
+
+          {pricingPreview && (
+            <div className='rounded-2xl border border-slate-200 bg-white p-4'>
+              <button
+                type='button'
+                onClick={() => setShowPriceBreakdown((prev) => !prev)}
+                className='flex w-full items-center justify-between gap-3 text-left'
+              >
+                <span className='text-base font-semibold text-gray-800'>
+                  {showPriceBreakdown ? 'Hide price breakdown' : 'Show price breakdown'}
+                </span>
+                <img
+                  src={assets.arrow_icon}
+                  alt=''
+                  className={`h-4 transition-transform ${showPriceBreakdown ? '-rotate-90' : 'rotate-90'}`}
+                />
+              </button>
+
+              {showPriceBreakdown && (
+                <div className='mt-4 space-y-3 border-t border-slate-100 pt-4 text-sm'>
+                  {pricingRows.map((item) => (
+                    <div key={item.label} className='flex items-center justify-between gap-4'>
+                      <span>{item.label}</span>
+                      <span className='font-medium text-gray-800'>{formatCurrency(currency, item.value)}</span>
+                    </div>
+                  ))}
+
+                  {pricingPreview.couponDiscount > 0 && (
+                    <div className='flex items-center justify-between gap-4 text-emerald-600'>
+                      <span>Coupon discount</span>
+                      <span className='font-medium'>- {formatCurrency(currency, pricingPreview.couponDiscount)}</span>
+                    </div>
+                  )}
+
+                  <div className='flex items-center justify-between gap-4 border-t border-slate-100 pt-3 text-base font-semibold text-gray-900'>
+                    <span>Total payable</span>
+                    <span>{formatCurrency(currency, pricingPreview.finalPrice)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className='space-y-3'>
             <p className='font-medium text-gray-800'>Payment Method</p>

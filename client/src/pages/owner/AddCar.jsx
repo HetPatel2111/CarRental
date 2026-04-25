@@ -12,6 +12,7 @@ const AddCar = () => {
   const [car,setCar] = useState({
     brand: "",
     model: "",
+    buyDate: "",
     year: 0,
     pricePerDay:0,
     category: "",
@@ -41,6 +42,7 @@ const AddCar = () => {
         setCar({
           brand: "",
           model: "",
+          buyDate: "",
           year: 0,
           pricePerDay:0,
           category: "",
@@ -93,6 +95,16 @@ const AddCar = () => {
             outline-none' value={car.model} onChange={e=> setCar({...car , model:e.
             target.value})}/>
           </div>
+        </div>
+
+        <div className='flex flex-col w-full'>
+          <label>Buy Date</label>
+          <input
+            type="date"
+            className='px-3 py-2 mt-1 border border-borderColor rounded-md outline-none'
+            value={car.buyDate}
+            onChange={e => setCar({ ...car, buyDate: e.target.value })}
+          />
         </div>
 
          {/* {car year , price , category} */}

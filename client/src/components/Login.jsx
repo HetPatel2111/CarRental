@@ -4,7 +4,7 @@ import {toast} from 'react-hot-toast';
 
 const Login = () => {
 
-  const {setShowLogin , axios , setToken, completeLoginRedirect} = useAppContext()
+  const {setShowLogin , axios , setToken, completeLoginRedirect, getErrorMessage} = useAppContext()
 
   const [state, setState] = React.useState("login");
   const [name, setName] = React.useState("");
@@ -33,7 +33,7 @@ const Login = () => {
         }
 
     }catch(error){
-        toast.error(error.message)
+        toast.error(getErrorMessage(error))
     }
   }
 

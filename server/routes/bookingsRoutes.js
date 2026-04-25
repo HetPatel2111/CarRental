@@ -7,20 +7,23 @@ import {
     getOwnerBookings,
     changeBookingStatus,
     checkAvailbilityOfCar,
-    cancelBooking
+    cancelBooking,
+    getBookingPricePreview
 } from "../controllers/bookingController.js"
 import {protect} from "../middleware/auth.js"
+import { bookingLimiter } from "../middleware/security.js"
 
 
 const bookingRouter = express.Router()
 
-bookingRouter.post('/check-availability' , checkAvailbilityOfCar)
-bookingRouter.post('/create', protect , createBooking)
-bookingRouter.post('/create-order', protect , createBookingOrder)
-bookingRouter.post('/verify-payment', protect , verifyBookingPayment)
+bookingRouter.post('/check-availability' , bookingLimiter, checkAvailbilityOfCar)
+bookingRouter.post('/pricing-preview' , bookingLimiter, getBookingPricePreview)
+bookingRouter.post('/create', bookingLimiter, protect , createBooking)
+bookingRouter.post('/create-order', bookingLimiter, protect , createBookingOrder)
+bookingRouter.post('/verify-payment', bookingLimiter, protect , verifyBookingPayment)
 bookingRouter.get('/user' ,protect ,getUserBookings)
 bookingRouter.get('/owner' , protect , getOwnerBookings)
-bookingRouter.post('/change-status' , protect , changeBookingStatus)
-bookingRouter.delete('/:id', protect, cancelBooking)
+bookingRouter.post('/change-status' , bookingLimiter, protect , changeBookingStatus)
+bookingRouter.delete('/:id', bookingLimiter, protect, cancelBooking)
 
 export default bookingRouter

@@ -1,6 +1,12 @@
 ﻿import Booking from "../models/Bookings.js";
 import Car from "../models/Car.js";
-import { calculateBookingPrice, checkAvailbility } from "./bookingController.js";
+import {
+  BookingConflictError,
+  calculateDynamicPricing,
+  cancelBookingReservation,
+  checkAvailbility,
+  createOfflineBookingReservation,
+} from "./bookingController.js";
 
 const MAX_CHAT_MESSAGES = 10;
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
@@ -77,6 +83,10 @@ const serializeBooking = (booking) => ({
   status: booking.status,
   paymentStatus: booking.paymentStatus,
   price: booking.price,
+  couponCode: booking.couponCode || "",
+  ownerPayout: booking.ownerPayout || booking.price,
+  platformRevenue: booking.platformRevenue || 0,
+  priceBreakdown: booking.priceBreakdown || null,
   pickupDate: toDateOnly(booking.pickupDate),
   returnDate: toDateOnly(booking.returnDate),
   car: booking.car
@@ -198,7 +208,7 @@ const extractDatesFromText = (text) => {
     if (durationDays && durationDays > 0) {
       return {
         pickupDate,
-        returnDate: toDateOnly(addDays(new Date(pickupDate), durationDays)),
+        returnDate: toDateOnly(addDays(new Date(pickupDate), durationDays - 1)),
       };
     }
 
@@ -569,7 +579,7 @@ const getRecommendationPool = (cars, filters) => {
 const ensureReturnDate = (pickupDate, returnDate) => {
   if (!pickupDate) return { pickupDate: null, returnDate: null };
   if (returnDate) return { pickupDate, returnDate };
-  return { pickupDate, returnDate: toDateOnly(addDays(new Date(pickupDate), 1)) };
+  return { pickupDate, returnDate: pickupDate };
 };
 
 const requireLoginResponse = (message) =>
@@ -605,14 +615,17 @@ const buildCarSearchResponse = (filters, pool) => {
 const buildPricingExplanation = () =>
   responseJson(
     "pricing_explanation",
-    "Current backend pricing is duration-based: total price = price per day x number of rental days. Weekend, demand, and surge multipliers are not implemented in the backend yet.",
+    "Current backend pricing uses marketplace logic: base rent plus weekend, festival, trending, demand, and last-minute surcharges, then dynamic service fee and coupon discount. Customer payment can differ from owner payout so platform margin is tracked separately.",
     "pricing_explanation",
     {
       pricingModel: {
-        type: "duration_based",
-        formula: "pricePerDay x rentalDays",
-        weekendPricingActive: false,
-        demandPricingActive: false,
+        type: "marketplace_dynamic",
+        formula: "basePrice + weekend + festival + trending + demand + inventory + lastMinute + serviceFee - couponDiscount",
+        weekendPricingActive: true,
+        festivalPricingActive: true,
+        trendingPricingActive: true,
+        demandPricingActive: true,
+        serviceFeeDynamic: true,
       },
     }
   );
@@ -651,6 +664,12 @@ const buildAvailabilityResponse = async (state, cars) => {
   const isAvailable = await checkAvailbility(state.selectedCar._id, pickupDate, returnDate);
 
   if (isAvailable) {
+    const pricing = await calculateDynamicPricing({
+      carData: state.selectedCar,
+      pickupDate,
+      returnDate,
+    });
+
     return responseJson(
       "availability_check",
       `${state.selectedCar.brand} ${state.selectedCar.model} is available from ${pickupDate} to ${returnDate}. If you want, I can prepare the booking now.`,
@@ -661,7 +680,8 @@ const buildAvailabilityResponse = async (state, cars) => {
           carName: `${state.selectedCar.brand} ${state.selectedCar.model}`,
           pickupDate,
           returnDate,
-          totalCost: calculateBookingPrice(state.selectedCar.pricePerDay, pickupDate, returnDate),
+          totalCost: pricing.finalPrice,
+          pricing,
         },
         cars: [serializeCar(state.selectedCar)],
         prompts: [`Book ${state.selectedCar.brand} ${state.selectedCar.model}`, "Show similar cars"],
@@ -749,15 +769,16 @@ const buildBookingPreparation = async (state, cars, user) => {
     );
   }
 
-  const totalCost = calculateBookingPrice(
-    state.selectedCar.pricePerDay,
+  const pricing = await calculateDynamicPricing({
+    carData: state.selectedCar,
     pickupDate,
-    returnDate
-  );
+    returnDate,
+    userId: user?._id || null,
+  });
 
   return responseJson(
     "booking_prepare",
-    `${state.selectedCar.brand} ${state.selectedCar.model} is available. Total cost is INR ${totalCost}. Please confirm if you want me to create the booking.`,
+    `${state.selectedCar.brand} ${state.selectedCar.model} is available. Total cost is INR ${pricing.finalPrice}, including surge and service fee where applicable. Please confirm if you want me to create the booking.`,
     "confirm_booking",
     {
         bookingPreview: {
@@ -765,7 +786,8 @@ const buildBookingPreparation = async (state, cars, user) => {
           carName: `${state.selectedCar.brand} ${state.selectedCar.model}`,
           pickupDate,
           returnDate,
-          totalCost,
+          totalCost: pricing.finalPrice,
+          pricing,
         },
       car: serializeCar(state.selectedCar),
       prompts: ["Confirm booking", "Show similar cars"],
@@ -812,17 +834,38 @@ const performBooking = async (state, user) => {
     );
   }
 
-  const totalCost = calculateBookingPrice(carData.pricePerDay, pickupDate, returnDate);
-  const booking = await Booking.create({
-    car: carData._id,
-    owner: carData.owner,
-    user: user._id,
+  const pricing = await calculateDynamicPricing({
+    carData,
     pickupDate,
     returnDate,
-    price: totalCost,
-    status: "pending",
-    paymentStatus: "pending",
+    userId: user._id,
   });
+  let booking;
+  try {
+    booking = await createOfflineBookingReservation({
+      carId: carData._id,
+      carData,
+      userId: user._id,
+      pickupDate,
+      returnDate,
+      pricing,
+      bookingSource: "chat",
+    });
+  } catch (error) {
+    if (error instanceof BookingConflictError) {
+      return responseJson(
+        "booking_confirm",
+        `${carData.brand} ${carData.model} was booked by someone else for an overlapping date range just now. Please choose different dates or another car.`,
+        "booking_failed",
+        {
+          car: serializeCar(carData),
+          prompts: ["Show similar cars", "Show cars for other dates", "Find another car"],
+        }
+      );
+    }
+
+    throw error;
+  }
 
   await booking.populate("car");
 
@@ -889,11 +932,9 @@ const cancelBookingFlow = async (state, user) => {
     );
   }
 
-  booking.status = "cancelled";
-  if (booking.paymentStatus === "pending") {
-    booking.paymentStatus = "failed";
-  }
-  await booking.save();
+  await cancelBookingReservation(booking, {
+    reason: "chat_cancelled_booking",
+  });
 
   return responseJson(
     "booking_management",

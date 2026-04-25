@@ -101,6 +101,13 @@ export const ownerMenuLinks = [
     { name: "Manage Bookings", path: "/owner/manage-bookings", icon: listIcon, coloredIcon: listIconColored },
 ]
 
+export const adminMenuLinks = [
+    { name: "Dashboard", path: "/admin", icon: dashboardIcon, coloredIcon: dashboardIconColored },
+    { name: "Pricing Rules", path: "/admin/pricing-rules", icon: addIcon, coloredIcon: addIconColored },
+    { name: "Coupons", path: "/admin/coupons", icon: listIcon, coloredIcon: listIconColored },
+    { name: "Settlements", path: "/admin/settlements", icon: carIcon, coloredIcon: carIconColored },
+]
+
 export const dummyUserData = {
   "_id": "6847f7cab3d8daecdb517095",
   "name": "GreatStack",

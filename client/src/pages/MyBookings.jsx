@@ -19,9 +19,9 @@ const getRentalDays = (pickupDate, returnDate) => {
   const end = new Date(returnDate)
   const diff = end - start
 
-  if (Number.isNaN(diff) || diff <= 0) return 0
+  if (Number.isNaN(diff) || diff < 0) return 0
 
-  return Math.ceil(diff / (1000 * 60 * 60 * 24))
+  return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1
 }
 
 const getStatusStyle = (status) => {

@@ -6,6 +6,7 @@ import {useAppContext} from '../../contex/AppContext'
 const NavbarOwner = () => {
 
     const {user} = useAppContext();
+    const roleLabel = user?.role === 'admin' ? 'admin workspace' : 'owner workspace';
 
   return (
     <div className='flex items-center justify-between px-6
@@ -14,7 +15,7 @@ const NavbarOwner = () => {
         <Link to='/'>
             <img src={assets.logo} alt="" className='h-7'/>
         </Link>
-        <p>Welcome , {user?.name || "owner"}</p>
+        <p>Welcome , {user?.name || roleLabel}</p>
     </div>
   )
 }

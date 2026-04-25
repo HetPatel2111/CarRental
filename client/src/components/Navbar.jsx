@@ -7,7 +7,7 @@ import {motion} from 'motion/react'
 
 const Navbar = () => {
 
-    const {setShowLogin , requestLogin , user , logout , isOwner , axios , setIsOwner} = useAppContext()
+    const {setShowLogin , requestLogin , user , logout , isOwner , isAdmin , axios , setIsOwner} = useAppContext()
 
     const location = useLocation();
     const [open,setOpen] = useState(false)
@@ -66,7 +66,11 @@ const Navbar = () => {
                     requestLogin({ onSuccess: changeRole })
                     return
                 }
-                isOwner ? navigate('/owner') : changeRole()}} className='cursor-pointer'>{isOwner ? 'Dashboard' : 'List cars'}</button>
+                if (isAdmin) {
+                    navigate('/admin')
+                    return
+                }
+                isOwner ? navigate('/owner') : changeRole()}} className='cursor-pointer'>{isAdmin ? 'Admin' : isOwner ? 'Dashboard' : 'List cars'}</button>
                 
                 <button onClick={()=>{user ? logout() : setShowLogin(true)}} className='cursor-pointer px-8 py-2 bg-primary hover:bg-primary-dull transition-all text-white rounded-lg'>{user ? 'Logout':'Login'}</button>
             </div>

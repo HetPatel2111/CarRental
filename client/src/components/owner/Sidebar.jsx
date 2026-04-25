@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { assets, ownerMenuLinks } from '../../assets/assets'
+import { adminMenuLinks, assets, ownerMenuLinks } from '../../assets/assets'
 import { NavLink, useLocation } from 'react-router-dom';
 import {useAppContext} from '../../contex/AppContext'
 import { toast } from "react-hot-toast";
@@ -9,6 +9,7 @@ const Sidebar = () => {
     const {user, axios , fetchUser} = useAppContext();
     const location = useLocation();
     const [image,setImage] = useState('');
+    const menuLinks = user?.role === 'admin' ? adminMenuLinks : ownerMenuLinks;
 
     const updateImage = async()=>{
         try{
@@ -54,7 +55,7 @@ const Sidebar = () => {
         <p className='mt-2 text-base max-md:hidden'>{user?.name}</p>
 
         <div className='w-full'>
-            {ownerMenuLinks.map((link,index)=>(
+            {menuLinks.map((link,index)=>(
                 <NavLink key={index} to={link.path} className={`relative flex
                 items-center gap-2 w-full py-3 pl-4 first:mt-6 ${link.path === location.pathname ? 'bg-primary/10 text-primary' : 'text-gray-600'}`}>
                     <img src={link.path === location.pathname ? link.coloredIcon : link.icon} alt="car-icon" />
