@@ -117,8 +117,7 @@ npm run dev
 - Professional empty states and loading states
 - Improved route guarding for owner pages
 - AI chatbot flow for search, booking, and booking management
-- Protected feature redirect flow that reopens the clicked feature after login
-- Cleaner README and environment setup
+
 
 ## Verification
 
