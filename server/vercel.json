@@ -6,6 +6,12 @@
       "use": "@vercel/node"
     }
   ],
+  "crons": [
+    {
+      "path": "/api/system/keep-alive",
+      "schedule": "*/30 * * * *"
+    }
+  ],
   "routes": [
     {
       "src": "/(.*)",

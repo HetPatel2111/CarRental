@@ -8,6 +8,7 @@ import ownerRouter from './routes/ownerRoutes.js'
 import bookingRouter from './routes/bookingsRoutes.js'
 import chatRouter from './routes/chatRoutes.js'
 import adminRouter from './routes/adminRoutes.js'
+import systemRouter from './routes/systemRoutes.js'
 import { apiLimiter, helmetMiddleware } from './middleware/security.js'
 
 const app = express()
@@ -21,9 +22,10 @@ await connectCache()
 // middleware
 app.use(helmetMiddleware)
 app.use(cors())
-app.use(apiLimiter)
 
 app.get('/',(req,res)=>res.send("server is running"))
+app.use('/api/system',systemRouter)
+app.use(apiLimiter)
 app.use('/api/user',userRouter)
 app.use('/api/owner',ownerRouter)
 app.use('/api/bookings',bookingRouter)

@@ -24,6 +24,7 @@ A production-style MERN application for car discovery, booking, and owner-side f
 - Admin dashboard for pricing, coupons, settlements, and platform analytics
 - In-memory caching for high-read endpoints
 - Security hardening with Helmet and route-specific rate limiting
+- Dedicated health and keep-alive system endpoints for monitoring and scheduled warm-up
 - Image uploads for cars and owner profile pictures using ImageKit
 
 ## Tech Stack
@@ -67,6 +68,11 @@ Performance/search settings:
 
 - `ENABLE_ATLAS_SEARCH=true` optional, enables MongoDB Atlas Search path
 - `MONGODB_SEARCH_INDEX` optional, defaults to `cars_search`
+
+Demo data maintenance:
+
+- `npm run seed:demo` recreates the demo dataset
+- `npm run update:demo-images` updates the Honda City 2023 and Toyota Innova Crysta image links in existing demo cars
 
 ## Local Setup
 
@@ -112,6 +118,8 @@ npm run dev
 - In-memory cache layer for public car listing, search, owner dashboard, owner bookings, admin dashboard, settlements, and coupons
 - MongoDB indexes for cars and bookings to improve query performance
 - Public performance summary endpoint at `/api/user/performance-summary`
+- Dedicated system routes at `/api/system/health`, `/api/system/keep-alive`, and `/api/system/performance-summary`
+- Vercel cron-ready keep-alive endpoint that can warm the server every 30 minutes
 - File upload validation and size limits
 - Better booking date validation and price calculation
 - Professional empty states and loading states
