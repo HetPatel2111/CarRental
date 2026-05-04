@@ -103,9 +103,10 @@ export const ownerMenuLinks = [
 
 export const adminMenuLinks = [
     { name: "Dashboard", path: "/admin", icon: dashboardIcon, coloredIcon: dashboardIconColored },
-    { name: "Pricing Rules", path: "/admin/pricing-rules", icon: addIcon, coloredIcon: addIconColored },
-    { name: "Coupons", path: "/admin/coupons", icon: listIcon, coloredIcon: listIconColored },
+    { name: "Coupons", path: "/admin/coupons", icon: addIcon, coloredIcon: addIconColored },
+    { name: "Pricing Rules", path: "/admin/pricing-rules", icon: listIcon, coloredIcon: listIconColored },
     { name: "Settlements", path: "/admin/settlements", icon: carIcon, coloredIcon: carIconColored },
+    { name: "Incentives", path: "/admin/incentives", icon: cautionIconColored, coloredIcon: cautionIconColored },
 ]
 
 export const dummyUserData = {

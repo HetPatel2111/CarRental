@@ -12,11 +12,11 @@ import AddCar from './pages/owner/AddCar';
 import ManageCars from './pages/owner/ManageCars';
 import ManageBooking from './pages/owner/ManageBookings';
 import AdminDashboard from './pages/admin/Dashboard';
-import PricingRules from './pages/admin/PricingRules';
 import Coupons from './pages/admin/Coupons';
+import PricingRules from './pages/admin/PricingRules';
 import Settlements from './pages/admin/Settlements';
+import Incentives from './pages/admin/Incentives';
 import Login from './components/Login';
-import Chatbot from './components/Chatbot';
 import {Toaster} from "react-hot-toast"
 import { useAppContext } from './contex/AppContext';
 
@@ -38,7 +38,7 @@ const App = () => {
         <Route path='/cars' element={<Cars/>}/>
         <Route path='/my-bookings' element={<MyBookings />}/>
 
-        <Route path='/owner' element={<Layout requiredRole='owner' basePath='/owner' />}>
+        <Route path='/owner' element={<Layout />}>
           <Route index element={<Dashboard />}/>
           <Route path='add-car' element={<AddCar />}/>
           <Route path='manage-cars' element={<ManageCars />}/>
@@ -47,9 +47,10 @@ const App = () => {
 
         <Route path='/admin' element={<Layout requiredRole='admin' basePath='/admin' />}>
           <Route index element={<AdminDashboard />}/>
-          <Route path='pricing-rules' element={<PricingRules />}/>
           <Route path='coupons' element={<Coupons />}/>
+          <Route path='pricing-rules' element={<PricingRules />}/>
           <Route path='settlements' element={<Settlements />}/>
+          <Route path='incentives' element={<Incentives />}/>
         </Route>
         
         <Route />
@@ -58,7 +59,6 @@ const App = () => {
       </Routes>
 
       {!isWorkspacePath && <Footer />}
-      {!isWorkspacePath && <Chatbot />}
       
     </>
   )

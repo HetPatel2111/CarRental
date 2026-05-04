@@ -9,6 +9,12 @@ import User from "../models/User.js"
 export const changeRoleToOwner = async(req, res) => {
     try {
         const {_id} = req.user
+        if (req.user.role === "admin") {
+            return res.json({
+                success: true,
+                message: "Admin account already has admin access"
+            })
+        }
         await User.findByIdAndUpdate(_id, {role: "owner"})
         res.json({
             success: true,

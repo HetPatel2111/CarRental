@@ -5,6 +5,7 @@ import {
     deleteCoupon,
     getAdminDashboard,
     getCoupons,
+    getIncentivesDashboard,
     getPricingConfig,
     getSettlementQueue,
     updateCoupon,
@@ -16,6 +17,7 @@ import { protect } from "../middleware/auth.js";
 const adminRouter = express.Router();
 
 adminRouter.get("/dashboard", protect, getAdminDashboard);
+adminRouter.get("/incentives-dashboard", protect, getIncentivesDashboard);
 adminRouter.get("/pricing-config", protect, getPricingConfig);
 adminRouter.put("/pricing-config", protect, updatePricingConfig);
 adminRouter.get("/coupons", protect, getCoupons);
