@@ -1,7 +1,5 @@
 import mongoose from "mongoose";
 
-const { Schema } = mongoose;
-
 const couponSchema = new mongoose.Schema(
     {
         code: {
@@ -59,11 +57,6 @@ const couponSchema = new mongoose.Schema(
         },
         expiresAt: {
             type: Date,
-            default: null
-        },
-        assignedUser: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
             default: null
         }
     },

@@ -188,10 +188,7 @@ const serializeCoupon = (coupon) => ({
     weekendOnly: coupon.weekendOnly,
     firstBookingOnly: coupon.firstBookingOnly,
     startsAt: coupon.startsAt,
-    expiresAt: coupon.expiresAt,
-    assignedUser: coupon.assignedUser?._id || coupon.assignedUser || null,
-    assignedUserName: coupon.assignedUser?.name || "",
-    assignedUserEmail: coupon.assignedUser?.email || ""
+    expiresAt: coupon.expiresAt
 });
 
 export const getAdminDashboard = async (req, res) => {
@@ -339,249 +336,6 @@ export const getAdminDashboard = async (req, res) => {
     }
 };
 
-export const getCustomerRewardsDashboard = async (req, res) => {
-    try {
-        if (!ensureAdmin(req, res)) return;
-
-        const { from, to, label } = getDateRange(String(req.query.range || "90d"));
-        const payload = await rememberCache(cacheKeys.adminDashboard(`incentives:${label}`), 90, async () => {
-            await seedDefaultCoupons();
-
-            const bookings = await Booking.find({
-                createdAt: { $gte: from, $lte: to },
-                status: "confirmed",
-                paymentStatus: "paid"
-            }).populate("car owner user");
-
-            const coupons = await Coupon.find().sort({ createdAt: -1 });
-            const customerMap = new Map();
-
-            bookings.forEach((booking) => {
-                const userId = String(booking.user?._id || booking.user || "");
-                if (!userId) return;
-
-                const currentCustomer = customerMap.get(userId) || {
-                    userId,
-                    userName: booking.user?.name || "Customer",
-                    email: booking.user?.email || "",
-                    bookings: 0,
-                    totalSpend: 0,
-                    netProfit: 0,
-                    couponUsage: 0,
-                    categories: {},
-                    lastBookingAt: booking.createdAt
-                };
-
-                currentCustomer.bookings += 1;
-                currentCustomer.totalSpend += Number(booking.price || 0);
-                currentCustomer.netProfit += Number(
-                    booking.priceBreakdown?.netPlatformProfit || booking.platformRevenue || 0
-                );
-                currentCustomer.couponUsage += booking.couponCode ? 1 : 0;
-
-                const category = booking.car?.category || "General";
-                currentCustomer.categories[category] = (currentCustomer.categories[category] || 0) + 1;
-
-                if (!currentCustomer.lastBookingAt || new Date(booking.createdAt) > new Date(currentCustomer.lastBookingAt)) {
-                    currentCustomer.lastBookingAt = booking.createdAt;
-                }
-
-                customerMap.set(userId, currentCustomer);
-            });
-
-            const topCustomers = Array.from(customerMap.values())
-                .map((customer) => {
-                    const favoriteCategory =
-                        Object.entries(customer.categories).sort((a, b) => b[1] - a[1])[0]?.[0] || "General";
-                    const daysSinceLastBooking = getDaysBetween(customer.lastBookingAt);
-
-                    let segment = "first_trip";
-                    if (customer.bookings >= 4 && customer.totalSpend >= 12000) {
-                        segment = "vip";
-                    } else if (daysSinceLastBooking >= 45) {
-                        segment = "winback";
-                    } else if (customer.bookings >= 2) {
-                        segment = "loyalty";
-                    }
-
-                    const recommendedCoupon =
-                        segment === "vip"
-                            ? {
-                                  code: `VIP${customer.userId.slice(-4).toUpperCase()}`,
-                                  type: "percent",
-                                  value: 15,
-                                  description: `VIP reward for ${customer.userName}`,
-                                  active: true,
-                                  fundedBy: "platform",
-                                  maxDiscount: 1800,
-                                  minBookingAmount: 5000,
-                                  category: favoriteCategory,
-                                  weekendOnly: false,
-                                  firstBookingOnly: false
-                              }
-                            : segment === "winback"
-                              ? {
-                                    code: `COME${customer.userId.slice(-4).toUpperCase()}`,
-                                    type: "flat",
-                                    value: 600,
-                                    description: `Win-back offer for ${customer.userName}`,
-                                    active: true,
-                                    fundedBy: "platform",
-                                    maxDiscount: 0,
-                                    minBookingAmount: 3500,
-                                    category: favoriteCategory,
-                                    weekendOnly: false,
-                                    firstBookingOnly: false
-                                }
-                              : segment === "loyalty"
-                                ? {
-                                      code: `LOYAL${customer.userId.slice(-4).toUpperCase()}`,
-                                      type: "percent",
-                                      value: 12,
-                                      description: `Loyalty reward for ${customer.userName}`,
-                                      active: true,
-                                      fundedBy: "platform",
-                                      maxDiscount: 1500,
-                                      minBookingAmount: 4000,
-                                      category: favoriteCategory,
-                                      weekendOnly: false,
-                                      firstBookingOnly: false
-                                  }
-                                : {
-                                      code: `NEXT${customer.userId.slice(-4).toUpperCase()}`,
-                                      type: "flat",
-                                      value: 300,
-                                      description: `Second-trip nudge for ${customer.userName}`,
-                                      active: true,
-                                      fundedBy: "platform",
-                                      maxDiscount: 0,
-                                      minBookingAmount: 2500,
-                                      category: favoriteCategory,
-                                      weekendOnly: false,
-                                      firstBookingOnly: false
-                                  };
-
-                    return {
-                        userId: customer.userId,
-                        userName: customer.userName,
-                        email: customer.email,
-                        bookings: customer.bookings,
-                        totalSpend: roundAmount(customer.totalSpend),
-                        netProfit: roundAmount(customer.netProfit),
-                        favoriteCategory,
-                        couponUsage: customer.couponUsage,
-                        daysSinceLastBooking,
-                        segment,
-                        recommendedCoupon: {
-                            ...recommendedCoupon,
-                            assignedUser: customer.userId
-                        }
-                    };
-                })
-                .sort((a, b) => b.totalSpend - a.totalSpend || b.bookings - a.bookings)
-                .slice(0, 12);
-
-            const now = new Date();
-            const fourteenDaysFromNow = new Date(now.getTime() + 14 * DAY_IN_MS);
-            const activeCoupons = coupons.filter((coupon) => coupon.active);
-
-            const couponHealth = {
-                total: coupons.length,
-                active: activeCoupons.length,
-                expiringSoon: coupons.filter(
-                    (coupon) => coupon.expiresAt && new Date(coupon.expiresAt) >= now && new Date(coupon.expiresAt) <= fourteenDaysFromNow
-                ).length,
-                firstBookingOffers: coupons.filter((coupon) => coupon.firstBookingOnly).length
-            };
-
-            const metrics = {
-                activeCustomers: topCustomers.length,
-                repeatCustomers: topCustomers.filter((customer) => customer.bookings >= 2).length,
-                atRiskCustomers: topCustomers.filter((customer) => customer.daysSinceLastBooking >= 45).length,
-                suggestedBudget: roundAmount(
-                    topCustomers.reduce((total, customer) => total + Number(customer.recommendedCoupon.value || 0), 0)
-                )
-            };
-
-            const campaignSuggestions = [
-                {
-                    id: "vip-retention",
-                    title: "VIP Retention Push",
-                    audienceCount: topCustomers.filter((customer) => customer.segment === "vip").length,
-                    highlight: "Reward your highest-value repeat customers with a premium discount to protect repeat revenue.",
-                    coupon: {
-                        code: "VIPBOOST",
-                        type: "percent",
-                        value: 15,
-                        description: "VIP reward for high-value repeat customers",
-                        active: true,
-                        fundedBy: "platform",
-                        maxDiscount: 2000,
-                        minBookingAmount: 6000,
-                        category: "",
-                        weekendOnly: false,
-                        firstBookingOnly: false
-                    }
-                },
-                {
-                    id: "winback-campaign",
-                    title: "Win-back Campaign",
-                    audienceCount: topCustomers.filter((customer) => customer.segment === "winback").length,
-                    highlight: "Bring back customers who have gone quiet with a strong flat discount offer.",
-                    coupon: {
-                        code: "COMEBACK600",
-                        type: "flat",
-                        value: 600,
-                        description: "Bring back inactive customers",
-                        active: true,
-                        fundedBy: "platform",
-                        maxDiscount: 0,
-                        minBookingAmount: 3500,
-                        category: "",
-                        weekendOnly: false,
-                        firstBookingOnly: false
-                    }
-                },
-                {
-                    id: "loyalty-boost",
-                    title: "Loyalty Booster",
-                    audienceCount: topCustomers.filter((customer) => customer.segment === "loyalty").length,
-                    highlight: "Nudge regular customers into their next trip with a medium-value loyalty discount.",
-                    coupon: {
-                        code: "LOYAL12",
-                        type: "percent",
-                        value: 12,
-                        description: "Loyalty reward for repeat customers",
-                        active: true,
-                        fundedBy: "platform",
-                        maxDiscount: 1500,
-                        minBookingAmount: 4000,
-                        category: "",
-                        weekendOnly: false,
-                        firstBookingOnly: false
-                    }
-                }
-            ];
-
-            return {
-                success: true,
-                range: label,
-                metrics,
-                couponHealth,
-                campaignSuggestions,
-                topCustomers
-            };
-        });
-
-        res.json(payload);
-    } catch (error) {
-        console.log(error.message);
-        res.json({ success: false, message: error.message });
-    }
-};
-
-export const getIncentivesDashboard = getCustomerRewardsDashboard;
-
 export const getPricingConfig = async (req, res) => {
     try {
         if (!ensureAdmin(req, res)) return;
@@ -645,9 +399,7 @@ export const getCoupons = async (req, res) => {
         if (!ensureAdmin(req, res)) return;
 
         await seedDefaultCoupons();
-        const coupons = await rememberCache(cacheKeys.adminCoupons(), 120, () =>
-            Coupon.find().populate("assignedUser", "name email").sort({ createdAt: -1 })
-        );
+        const coupons = await rememberCache(cacheKeys.adminCoupons(), 120, () => Coupon.find().sort({ createdAt: -1 }));
         res.json({ success: true, coupons: coupons.map(serializeCoupon) });
     } catch (error) {
         console.log(error.message);
@@ -673,10 +425,8 @@ export const createCoupon = async (req, res) => {
             weekendOnly: Boolean(payload.weekendOnly),
             firstBookingOnly: Boolean(payload.firstBookingOnly),
             startsAt: payload.startsAt || null,
-            expiresAt: payload.expiresAt || null,
-            assignedUser: payload.assignedUser || null
+            expiresAt: payload.expiresAt || null
         });
-        await coupon.populate("assignedUser", "name email");
         await invalidateAdminCache();
 
         res.json({ success: true, message: "Coupon created", coupon: serializeCoupon(coupon) });
@@ -712,12 +462,10 @@ export const updateCoupon = async (req, res) => {
             firstBookingOnly:
                 payload.firstBookingOnly !== undefined ? Boolean(payload.firstBookingOnly) : coupon.firstBookingOnly,
             startsAt: payload.startsAt !== undefined ? payload.startsAt || null : coupon.startsAt,
-            expiresAt: payload.expiresAt !== undefined ? payload.expiresAt || null : coupon.expiresAt,
-            assignedUser: payload.assignedUser !== undefined ? payload.assignedUser || null : coupon.assignedUser
+            expiresAt: payload.expiresAt !== undefined ? payload.expiresAt || null : coupon.expiresAt
         });
 
         await coupon.save();
-        await coupon.populate("assignedUser", "name email");
         await invalidateAdminCache();
         res.json({ success: true, message: "Coupon updated", coupon: serializeCoupon(coupon) });
     } catch (error) {

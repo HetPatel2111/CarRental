@@ -142,7 +142,7 @@ const Coupons = () => {
         <div className='grid gap-6 xl:grid-cols-[0.95fr_1.25fr]'>
           <form onSubmit={saveCoupon} className='rounded-3xl bg-white p-6 shadow-sm'>
             <h3 className='text-lg font-semibold text-slate-900'>{editingId ? 'Edit Coupon' : 'Create Coupon'}</h3>
-            <p className='mt-2 text-sm text-gray-500'>Each field now explains what the admin should enter. For customer-only reward coupons, use the Customer Rewards section to auto-create a private code for one user.</p>
+            <p className='mt-2 text-sm text-gray-500'>Each field now explains what the admin should enter so the coupon can be created correctly.</p>
             <div className='mt-5 grid gap-4'>
               <label className='text-sm font-medium text-slate-700'>
                 Coupon code
@@ -265,9 +265,6 @@ const Coupons = () => {
                       <td className='py-4'>
                         <p className='font-semibold text-slate-900'>{coupon.code}</p>
                         <p className='text-xs text-gray-500'>{coupon.description}</p>
-                        {coupon.assignedUserName && (
-                          <p className='text-xs text-emerald-700'>Private for {coupon.assignedUserName}</p>
-                        )}
                       </td>
                       <td className='py-4 text-gray-600'>{coupon.type} • {coupon.value}</td>
                       <td className='py-4 text-gray-600'>

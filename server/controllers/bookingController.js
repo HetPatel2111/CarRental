@@ -248,16 +248,6 @@ const evaluateCoupon = async ({ couponCode, subtotal, carData, pickupDate, retur
         throw new Error(`Coupon ${normalizedCode} is only valid for weekend rentals`);
     }
 
-    if (rule.assignedUser) {
-        if (!userId) {
-            throw new Error(`Coupon ${normalizedCode} is only available for the assigned customer`);
-        }
-
-        if (rule.assignedUser.toString() !== userId.toString()) {
-            throw new Error(`Coupon ${normalizedCode} is not valid for this account`);
-        }
-    }
-
     if (rule.firstBookingOnly && userId) {
         const existingBookings = await Booking.countDocuments({
             user: userId,

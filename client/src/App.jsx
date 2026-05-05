@@ -15,7 +15,6 @@ import AdminDashboard from './pages/admin/Dashboard';
 import Coupons from './pages/admin/Coupons';
 import PricingRules from './pages/admin/PricingRules';
 import Settlements from './pages/admin/Settlements';
-import CustomerRewards from './pages/admin/CustomerRewards';
 import Login from './components/Login';
 import {Toaster} from "react-hot-toast"
 import { useAppContext } from './contex/AppContext';
@@ -50,7 +49,6 @@ const App = () => {
           <Route path='coupons' element={<Coupons />}/>
           <Route path='pricing-rules' element={<PricingRules />}/>
           <Route path='settlements' element={<Settlements />}/>
-          <Route path='customer-rewards' element={<CustomerRewards />}/>
         </Route>
         
         <Route />
