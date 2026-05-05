@@ -106,7 +106,7 @@ export const adminMenuLinks = [
     { name: "Coupons", path: "/admin/coupons", icon: addIcon, coloredIcon: addIconColored },
     { name: "Pricing Rules", path: "/admin/pricing-rules", icon: listIcon, coloredIcon: listIconColored },
     { name: "Settlements", path: "/admin/settlements", icon: carIcon, coloredIcon: carIconColored },
-    { name: "Incentives", path: "/admin/incentives", icon: cautionIconColored, coloredIcon: cautionIconColored },
+    { name: "Customer Rewards", path: "/admin/customer-rewards", icon: cautionIconColored, coloredIcon: cautionIconColored },
 ]
 
 export const dummyUserData = {

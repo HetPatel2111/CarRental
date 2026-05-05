@@ -4,6 +4,7 @@ import {
     createCoupon,
     deleteCoupon,
     getAdminDashboard,
+    getCustomerRewardsDashboard,
     getCoupons,
     getIncentivesDashboard,
     getPricingConfig,
@@ -18,6 +19,7 @@ const adminRouter = express.Router();
 
 adminRouter.get("/dashboard", protect, getAdminDashboard);
 adminRouter.get("/incentives-dashboard", protect, getIncentivesDashboard);
+adminRouter.get("/customer-rewards-dashboard", protect, getCustomerRewardsDashboard);
 adminRouter.get("/pricing-config", protect, getPricingConfig);
 adminRouter.put("/pricing-config", protect, updatePricingConfig);
 adminRouter.get("/coupons", protect, getCoupons);

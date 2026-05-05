@@ -188,7 +188,10 @@ const serializeCoupon = (coupon) => ({
     weekendOnly: coupon.weekendOnly,
     firstBookingOnly: coupon.firstBookingOnly,
     startsAt: coupon.startsAt,
-    expiresAt: coupon.expiresAt
+    expiresAt: coupon.expiresAt,
+    assignedUser: coupon.assignedUser?._id || coupon.assignedUser || null,
+    assignedUserName: coupon.assignedUser?.name || "",
+    assignedUserEmail: coupon.assignedUser?.email || ""
 });
 
 export const getAdminDashboard = async (req, res) => {
@@ -336,7 +339,7 @@ export const getAdminDashboard = async (req, res) => {
     }
 };
 
-export const getIncentivesDashboard = async (req, res) => {
+export const getCustomerRewardsDashboard = async (req, res) => {
     try {
         if (!ensureAdmin(req, res)) return;
 
@@ -469,7 +472,10 @@ export const getIncentivesDashboard = async (req, res) => {
                         couponUsage: customer.couponUsage,
                         daysSinceLastBooking,
                         segment,
-                        recommendedCoupon
+                        recommendedCoupon: {
+                            ...recommendedCoupon,
+                            assignedUser: customer.userId
+                        }
                     };
                 })
                 .sort((a, b) => b.totalSpend - a.totalSpend || b.bookings - a.bookings)
@@ -574,6 +580,8 @@ export const getIncentivesDashboard = async (req, res) => {
     }
 };
 
+export const getIncentivesDashboard = getCustomerRewardsDashboard;
+
 export const getPricingConfig = async (req, res) => {
     try {
         if (!ensureAdmin(req, res)) return;
@@ -637,7 +645,9 @@ export const getCoupons = async (req, res) => {
         if (!ensureAdmin(req, res)) return;
 
         await seedDefaultCoupons();
-        const coupons = await rememberCache(cacheKeys.adminCoupons(), 120, () => Coupon.find().sort({ createdAt: -1 }));
+        const coupons = await rememberCache(cacheKeys.adminCoupons(), 120, () =>
+            Coupon.find().populate("assignedUser", "name email").sort({ createdAt: -1 })
+        );
         res.json({ success: true, coupons: coupons.map(serializeCoupon) });
     } catch (error) {
         console.log(error.message);
@@ -663,8 +673,10 @@ export const createCoupon = async (req, res) => {
             weekendOnly: Boolean(payload.weekendOnly),
             firstBookingOnly: Boolean(payload.firstBookingOnly),
             startsAt: payload.startsAt || null,
-            expiresAt: payload.expiresAt || null
+            expiresAt: payload.expiresAt || null,
+            assignedUser: payload.assignedUser || null
         });
+        await coupon.populate("assignedUser", "name email");
         await invalidateAdminCache();
 
         res.json({ success: true, message: "Coupon created", coupon: serializeCoupon(coupon) });
@@ -700,10 +712,12 @@ export const updateCoupon = async (req, res) => {
             firstBookingOnly:
                 payload.firstBookingOnly !== undefined ? Boolean(payload.firstBookingOnly) : coupon.firstBookingOnly,
             startsAt: payload.startsAt !== undefined ? payload.startsAt || null : coupon.startsAt,
-            expiresAt: payload.expiresAt !== undefined ? payload.expiresAt || null : coupon.expiresAt
+            expiresAt: payload.expiresAt !== undefined ? payload.expiresAt || null : coupon.expiresAt,
+            assignedUser: payload.assignedUser !== undefined ? payload.assignedUser || null : coupon.assignedUser
         });
 
         await coupon.save();
+        await coupon.populate("assignedUser", "name email");
         await invalidateAdminCache();
         res.json({ success: true, message: "Coupon updated", coupon: serializeCoupon(coupon) });
     } catch (error) {

@@ -13,7 +13,7 @@ const segmentLabel = {
   first_trip: 'Second-trip push',
 }
 
-const Incentives = () => {
+const CustomerRewards = () => {
   const { axios, currency } = useAppContext()
   const [dashboard, setDashboard] = useState(null)
   const [range, setRange] = useState('90d')
@@ -24,7 +24,7 @@ const Incentives = () => {
   const fetchDashboard = async (selectedRange = range) => {
     try {
       setLoading(true)
-      const { data } = await axios.get(`/api/admin/incentives-dashboard?range=${selectedRange}`)
+      const { data } = await axios.get(`/api/admin/customer-rewards-dashboard?range=${selectedRange}`)
       if (data.success) {
         setDashboard(data)
       } else {
@@ -83,10 +83,10 @@ const Incentives = () => {
           <div className='flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
             <div>
               <Title
-                title='Incentives and Growth'
-                subTitle='Separate campaign workspace for customer rewards, retention offers, and loyalty moves without mixing it into coupon editing.'
+                title='Customer Rewards'
+                subTitle='Reward top customers with private coupon codes that only the selected customer can use.'
               />
-              <p className='mt-4 text-sm text-emerald-100'>Use this page to decide who should get a reward, then create the coupon from the recommendation.</p>
+              <p className='mt-4 text-sm text-emerald-100'>Use this section to spot high-value customers, create a reward code, and keep those offers separate from owner settlement incentives.</p>
             </div>
             <div className='flex flex-col gap-3 md:items-end'>
               <div className='flex items-center gap-2 rounded-2xl bg-white/10 p-2 backdrop-blur'>
@@ -116,7 +116,7 @@ const Incentives = () => {
         </div>
 
         {loading ? (
-          <div className='rounded-3xl bg-white p-10 text-center text-gray-500 shadow-sm'>Loading incentive dashboard...</div>
+          <div className='rounded-3xl bg-white p-10 text-center text-gray-500 shadow-sm'>Loading customer rewards...</div>
         ) : (
           <>
             <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
@@ -138,7 +138,7 @@ const Incentives = () => {
                 <div className='flex items-center justify-between gap-3'>
                   <div>
                     <h3 className='text-lg font-semibold text-slate-900'>Campaign Suggestions</h3>
-                    <p className='text-sm text-gray-500'>Pre-built reward ideas based on customer behavior and booking history.</p>
+                    <p className='text-sm text-gray-500'>Broader promo ideas for retention campaigns that can still be created in one click.</p>
                   </div>
                   <Link to='/admin/coupons' className='text-sm font-semibold text-primary'>
                     Manage all coupons
@@ -171,7 +171,7 @@ const Incentives = () => {
 
               <div className='rounded-3xl bg-white p-6 shadow-sm'>
                 <h3 className='text-lg font-semibold text-slate-900'>Coupon Health</h3>
-                <p className='mt-1 text-sm text-gray-500'>Keep incentive campaigns separate from operational dashboard metrics.</p>
+                <p className='mt-1 text-sm text-gray-500'>Track overall coupon inventory while you prepare private customer rewards.</p>
                 <div className='mt-5 grid gap-4'>
                   <div className='rounded-2xl bg-slate-50 p-4'>
                     <p className='text-xs text-gray-500'>Total Coupons</p>
@@ -197,7 +197,7 @@ const Incentives = () => {
               <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
                 <div>
                   <h3 className='text-lg font-semibold text-slate-900'>Top Customers To Reward</h3>
-                  <p className='text-sm text-gray-500'>These users are ranked by spend and repeat behavior, with a coupon suggestion ready for admin action.</p>
+                  <p className='text-sm text-gray-500'>Each reward below creates a coupon bound to that specific customer account only.</p>
                 </div>
                 <input
                   value={search}
@@ -214,7 +214,7 @@ const Incentives = () => {
                       <th className='pb-3'>Customer</th>
                       <th className='pb-3'>Performance</th>
                       <th className='pb-3'>Behavior</th>
-                      <th className='pb-3'>Recommended Offer</th>
+                      <th className='pb-3'>Private Coupon</th>
                       <th className='pb-3'>Action</th>
                     </tr>
                   </thead>
@@ -239,6 +239,7 @@ const Incentives = () => {
                           <p className='font-semibold text-slate-900'>{customer.recommendedCoupon.code}</p>
                           <p>{customer.recommendedCoupon.type} • {customer.recommendedCoupon.value}</p>
                           <p>Min {currencyValue(currency, customer.recommendedCoupon.minBookingAmount)}</p>
+                          <p className='text-xs text-emerald-700'>Valid only for {customer.userName}</p>
                         </td>
                         <td className='py-4'>
                           <button
@@ -246,7 +247,7 @@ const Incentives = () => {
                             disabled={creatingCode === customer.recommendedCoupon.code}
                             className='rounded-2xl bg-primary px-4 py-2 text-xs font-semibold text-white disabled:opacity-60'
                           >
-                            {creatingCode === customer.recommendedCoupon.code ? 'Creating...' : 'Create Reward Coupon'}
+                            {creatingCode === customer.recommendedCoupon.code ? 'Creating...' : 'Create Private Reward'}
                           </button>
                         </td>
                       </tr>
@@ -266,4 +267,4 @@ const Incentives = () => {
   )
 }
 
-export default Incentives
+export default CustomerRewards

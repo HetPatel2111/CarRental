@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { assets } from '../../assets/assets'
 import Title from '../../components/owner/Title'
 import { useAppContext } from '../../contex/AppContext'
 
@@ -29,6 +30,7 @@ const AdminDashboard = () => {
   const [performance, setPerformance] = useState(null)
   const [search, setSearch] = useState('')
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [showFullQueue, setShowFullQueue] = useState(false)
 
   const fetchDashboard = async (selectedRange = range) => {
     try {
@@ -63,6 +65,7 @@ const AdminDashboard = () => {
   const settlementQueue = dashboard?.settlementQueue || []
   const pricingInsights = dashboard?.pricingInsights || {}
   const query = search.trim().toLowerCase()
+  const visibleSettlementQueue = showFullQueue ? settlementQueue : settlementQueue.slice(0, 3)
 
   const topOwners = useMemo(
     () => (dashboard?.topOwners || []).filter((owner) =>
@@ -168,10 +171,28 @@ const AdminDashboard = () => {
               </div>
 
               <div className='rounded-3xl bg-white p-6 shadow-sm'>
-                <h3 className='text-lg font-semibold text-slate-900'>Pending Settlement Queue</h3>
-                <p className='mt-1 text-sm text-gray-500'>Latest confirmed and paid bookings waiting for settlement review.</p>
+                <div className='flex items-start justify-between gap-4'>
+                  <div>
+                    <h3 className='text-lg font-semibold text-slate-900'>Pending Settlement Queue</h3>
+                    <p className='mt-1 text-sm text-gray-500'>Latest confirmed and paid bookings waiting for settlement review.</p>
+                  </div>
+                  {settlementQueue.length > 3 && (
+                    <button
+                      type='button'
+                      onClick={() => setShowFullQueue((prev) => !prev)}
+                      className='inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-primary hover:text-primary'
+                    >
+                      {showFullQueue ? 'Show less' : `Show all ${settlementQueue.length}`}
+                      <img
+                        src={assets.arrow_icon}
+                        alt='toggle queue'
+                        className={`h-3 transition-transform ${showFullQueue ? '-rotate-90' : 'rotate-90'}`}
+                      />
+                    </button>
+                  )}
+                </div>
                 <div className='mt-5 space-y-3'>
-                  {settlementQueue.length ? settlementQueue.map((booking) => (
+                  {visibleSettlementQueue.length ? visibleSettlementQueue.map((booking) => (
                     <div key={booking._id} className='rounded-2xl bg-slate-50 p-4'>
                       <div className='flex items-start justify-between gap-3'>
                         <div>
